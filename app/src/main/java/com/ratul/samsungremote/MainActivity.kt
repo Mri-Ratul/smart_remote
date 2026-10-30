@@ -1,121 +1,94 @@
 package com.ratul.samsungremote
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var tvManager: SamsungTvManager
-    private lateinit var gestureDetector: GestureDetector
 
-    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         tvManager = SamsungTvManager(this)
 
-        val etTvIp = findViewById<EditText>(R.id.etTvIp)
-        val btnConnect = findViewById<Button>(R.id.btnConnect)
-        val tvStatus = findViewById<TextView>(R.id.tvStatus)
-        val etSearchText = findViewById<EditText>(R.id.etSearchText)
-        val btnSendText = findViewById<Button>(R.id.btnSendText)
-        val touchTrackpad = findViewById<View>(R.id.touchTrackpad)
+        val tvStatus = findViewById<TextView>(R.id.tvTvStatus)
+        val btnScan = findViewById<Button>(R.id.btnScan)
 
-        val savedIp = tvManager.getSavedIp()
-        if (savedIp.isNotEmpty()) {
-            etTvIp.setText(savedIp as CharSequence)
+        tvManager.onStatusChanged = { status ->
+            runOnUiThread { tvStatus.text = status }
         }
 
-        tvManager.onStatusChanged = { status: String ->
-            runOnUiThread { tvStatus.text = "Status: $status" }
-        }
-
-        btnConnect.setOnClickListener {
-            val ip = etTvIp.text.toString().trim()
-            if (ip.isEmpty()) {
-                Toast.makeText(this, "Please enter your TV's IP", Toast.LENGTH_SHORT).show()
-            } else {
-                tvManager.connect(ip)
+        tvManager.onTvDiscovered = { ip ->
+            runOnUiThread {
+                Toast.makeText(this, "Found TV at $ip! Connecting...", Toast.LENGTH_SHORT).show()
             }
         }
 
-        btnSendText.setOnClickListener {
-            val text = etSearchText.text.toString().trim()
-            if (text.isNotEmpty()) {
-                tvManager.sendText(text)
-                etSearchText.setText("")
-            }
+        btnScan.setOnClickListener {
+            tvManager.autoDiscoverTv()
         }
 
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            private val swipeThreshold = 50
-            private val swipeVelocityThreshold = 50
+        // অ্যাপ অন হলেই স্বয়ংক্রিয়ভাবে লোকাল নেটওয়ার্কে টিভি খুঁজবে
+        tvManager.autoDiscoverTv()
 
-            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                tvManager.sendKey("KEY_ENTER")
-                return true
-            }
-
-            override fun onFling(
-                e1: MotionEvent?,
-                e2: MotionEvent,
-                velocityX: Float,
-                velocityY: Float
-            ): Boolean {
-                if (e1 == null) return false
-                val diffY = e2.y - e1.y
-                val diffX = e2.x - e1.x
-
-                if (abs(diffX) > abs(diffY)) {
-                    if (abs(diffX) > swipeThreshold && abs(velocityX) > swipeVelocityThreshold) {
-                        if (diffX > 0) {
-                            tvManager.sendKey("KEY_RIGHT")
-                        } else {
-                            tvManager.sendKey("KEY_LEFT")
-                        }
-                        return true
-                    }
-                } else {
-                    if (abs(diffY) > swipeThreshold && abs(velocityY) > swipeVelocityThreshold) {
-                        if (diffY > 0) {
-                            tvManager.sendKey("KEY_DOWN")
-                        } else {
-                            tvManager.sendKey("KEY_UP")
-                        }
-                        return true
-                    }
-                }
-                return false
-            }
-        })
-
-        touchTrackpad.setOnTouchListener { _, event ->
-            gestureDetector.onTouchEvent(event)
-            true
-        }
-
+        // 1. Top Bar
         findViewById<Button>(R.id.btnPower).setOnClickListener { tvManager.sendKey("KEY_POWER") }
         findViewById<Button>(R.id.btnSource).setOnClickListener { tvManager.sendKey("KEY_SOURCE") }
-        findViewById<Button>(R.id.btnMute).setOnClickListener { tvManager.sendKey("KEY_MUTE") }
 
-        findViewById<Button>(R.id.btnBack).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
-        findViewById<Button>(R.id.btnHome).setOnClickListener { tvManager.sendKey("KEY_HOME") }
-        findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
+        // 2. Apps & Quick Access
+        findViewById<Button>(R.id.btnYouTube).setOnClickListener { tvManager.launchYouTube() }
+        findViewById<Button>(R.id.btnChList).setOnClickListener { tvManager.sendKey("KEY_CHLIST") }
+        findViewById<Button>(R.id.btnPreCh).setOnClickListener { tvManager.sendKey("KEY_PRECH") }
 
+        // 3. Volume & Channel
         findViewById<Button>(R.id.btnVolUp).setOnClickListener { tvManager.sendKey("KEY_VOLUP") }
         findViewById<Button>(R.id.btnVolDown).setOnClickListener { tvManager.sendKey("KEY_VOLDOWN") }
+        findViewById<Button>(R.id.btnMute).setOnClickListener { tvManager.sendKey("KEY_MUTE") }
         findViewById<Button>(R.id.btnChUp).setOnClickListener { tvManager.sendKey("KEY_CHUP") }
         findViewById<Button>(R.id.btnChDown).setOnClickListener { tvManager.sendKey("KEY_CHDOWN") }
+
+        // 4. Utility Row
+        findViewById<Button>(R.id.btnSettings).setOnClickListener { tvManager.sendKey("KEY_MENU") }
+        findViewById<Button>(R.id.btnHome).setOnClickListener { tvManager.sendKey("KEY_HOME") }
+        findViewById<Button>(R.id.btnGuide).setOnClickListener { tvManager.sendKey("KEY_GUIDE") }
+
+        // 5. D-Pad Cluster
+        findViewById<Button>(R.id.btnUp).setOnClickListener { tvManager.sendKey("KEY_UP") }
+        findViewById<Button>(R.id.btnDown).setOnClickListener { tvManager.sendKey("KEY_DOWN") }
+        findViewById<Button>(R.id.btnLeft).setOnClickListener { tvManager.sendKey("KEY_LEFT") }
+        findViewById<Button>(R.id.btnRight).setOnClickListener { tvManager.sendKey("KEY_RIGHT") }
+        findViewById<Button>(R.id.btnEnter).setOnClickListener { tvManager.sendKey("KEY_ENTER") }
+
+        findViewById<Button>(R.id.btnInfo).setOnClickListener { tvManager.sendKey("KEY_INFO") }
+        findViewById<Button>(R.id.btnEManual).setOnClickListener { tvManager.sendKey("KEY_CONTENTS") }
+        findViewById<Button>(R.id.btnReturn).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
+        findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
+
+        // 6. Media Playback Controls
+        findViewById<Button>(R.id.btnPlay).setOnClickListener { tvManager.sendKey("KEY_PLAY") }
+        findViewById<Button>(R.id.btnPause).setOnClickListener { tvManager.sendKey("KEY_PAUSE") }
+        findViewById<Button>(R.id.btnStop).setOnClickListener { tvManager.sendKey("KEY_STOP") }
+        findViewById<Button>(R.id.btnRewind).setOnClickListener { tvManager.sendKey("KEY_REWIND") }
+        findViewById<Button>(R.id.btnFastForward).setOnClickListener { tvManager.sendKey("KEY_FF") }
+
+        // 7. Navigation Tabs (View Switchers)
+        findViewById<Button>(R.id.navButtons).setOnClickListener {
+            Toast.makeText(this, "Buttons Remote Active", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.navTouchpad).setOnClickListener {
+            Toast.makeText(this, "Touchpad View (Next Step)", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.navAirMouse).setOnClickListener {
+            Toast.makeText(this, "Air Mouse (Next Step)", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.navAiVoice).setOnClickListener {
+            Toast.makeText(this, "AI Voice (Next Step)", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onDestroy() {
