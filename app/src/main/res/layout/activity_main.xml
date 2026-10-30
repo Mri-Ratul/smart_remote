@@ -38,7 +38,7 @@
             android:textStyle="bold" />
     </RelativeLayout>
 
-    <!-- 1. Physical Remote Buttons View -->
+    <!-- 1. Physical Buttons Remote Container -->
     <ScrollView
         android:id="@+id/containerButtons"
         android:layout_width="match_parent"
@@ -98,7 +98,7 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <!-- Row 2: TTX/MIX, YouTube, PRE-CH -->
+                <!-- Row 2: TTX/MIX, YouTube (in place of 0), PRE-CH -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -409,7 +409,7 @@
                         android:textSize="9sp" />
                 </LinearLayout>
 
-                <!-- Row 8: Extra Controls -->
+                <!-- Row 8: Extra Physical Buttons -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -519,7 +519,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- 2. Touchpad View -->
+    <!-- 2. Touchpad Surface Container -->
     <LinearLayout
         android:id="@+id/containerTouchpad"
         android:layout_width="match_parent"
@@ -551,3 +551,189 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnLeftClick"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="#202433"
+                android:text="LEFT CLICK"
+                android:textColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/btnRightClick"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="#202433"
+                android:text="RIGHT CLICK"
+                android:textColor="#FFFFFF" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 3. Air Mouse Container -->
+    <LinearLayout
+        android:id="@+id/containerAirMouse"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
+        android:layout_below="@id/headerLayout"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvAirMouseStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hold button and point phone at TV"
+            android:textColor="#00E5FF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnAirTrigger"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_marginTop="40dp"
+            android:backgroundTint="#2563EB"
+            android:text="HOLD TO&#10;AIM &amp; MOVE"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnAirClick"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="40dp"
+            android:backgroundTint="#10B981"
+            android:text="SELECT / OK"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 4. Voice Input Container -->
+    <LinearLayout
+        android:id="@+id/containerAiVoice"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
+        android:layout_below="@id/headerLayout"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Voice Input"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvVoiceFeedback"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Tap MIC and speak (Bangla or English)"
+            android:textColor="#8892B0"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnMicTrigger"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:layout_marginTop="30dp"
+            android:backgroundTint="#2563EB"
+            android:text="🎙&#10;TAP TO&#10;SPEAK"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/etTranscribedText"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:layout_marginTop="28dp"
+            android:background="#161824"
+            android:gravity="top|start"
+            android:hint="Spoken text appears here..."
+            android:padding="14dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#555E75"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/btnSendVoiceToTv"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#10B981"
+            android:text="SEND TEXT TO TV SEARCH"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Bottom Navigation Bar -->
+    <LinearLayout
+        android:id="@+id/bottomNavBar"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_alignParentBottom="true"
+        android:background="#131620"
+        android:elevation="8dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/navButtons"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:backgroundTint="#1D2230"
+            android:text="Buttons"
+            android:textColor="#00E5FF"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/navTouchpad"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:backgroundTint="#131620"
+            android:text="Touchpad"
+            android:textColor="#8892B0"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/navAirMouse"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:backgroundTint="#131620"
+            android:text="Air Mouse"
+            android:textColor="#8892B0"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/navAiVoice"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:backgroundTint="#131620"
+            android:text="AI Voice"
+            android:textColor="#8892B0"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+</RelativeLayout>
