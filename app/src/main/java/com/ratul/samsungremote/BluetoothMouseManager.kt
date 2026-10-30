@@ -15,7 +15,7 @@ class BluetoothMouseManager(private val context: Context) {
 
     var onStatusChanged: ((String) -> Unit)? = null
 
-    // Standard HID Report Descriptor for Mouse + Consumer Keys
+    // Standard HID Report Descriptor for Mouse
     private val hidReportDescriptor = byteArrayOf(
         0x05.toByte(), 0x01.toByte(), // USAGE_PAGE (Generic Desktop)
         0x09.toByte(), 0x02.toByte(), // USAGE (Mouse)
@@ -90,11 +90,12 @@ class BluetoothMouseManager(private val context: Context) {
     }
 
     private fun registerApp() {
+        // 0x02.toByte() represents SUBCLASS_MOUSE in Bluetooth HID profile specification
         val sdpSettings = BluetoothHidDeviceAppSdpSettings(
             "Smart Remote Mouse",
             "Samsung TV Controller",
             "Ratul",
-            BluetoothHidDeviceAppSdpSettings.SUBCLASS1_COMBO,
+            0x02.toByte(),
             hidReportDescriptor
         )
         val qosSettings = BluetoothHidDeviceAppQosSettings(
@@ -120,7 +121,7 @@ class BluetoothMouseManager(private val context: Context) {
     fun sendMouseClick(isRightClick: Boolean = false) {
         val device = hostDevice ?: return
         val buttonByte = if (isRightClick) 0x02.toByte() else 0x01.toByte()
-        
+
         // Button Down
         hidDevice?.sendReport(device, 1, byteArrayOf(buttonByte, 0, 0, 0))
         // Button Up
