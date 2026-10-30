@@ -57,7 +57,7 @@ class SamsungTvManager(private val context: Context) {
         webSocket = getUnsafeOkHttpClient().newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 isConnected = true
-                onStatusChanged?.invoke("Connected! Check TV screen if prompt appears.")
+                onStatusChanged?.invoke("Connected")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -69,7 +69,7 @@ class SamsungTvManager(private val context: Context) {
                         val token = data?.optString("token", "") ?: ""
                         if (token.isNotEmpty()) {
                             prefs.edit().putString("auth_token", token).apply()
-                            onStatusChanged?.invoke("Pairing Successful & Saved!")
+                            onStatusChanged?.invoke("Connected & Paired")
                         }
                     }
                 } catch (e: Exception) {
@@ -79,7 +79,7 @@ class SamsungTvManager(private val context: Context) {
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 isConnected = false
-                onStatusChanged?.invoke("Connection Failed: ${t.localizedMessage}")
+                onStatusChanged?.invoke("Disconnected: ${t.localizedMessage}")
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -104,7 +104,22 @@ class SamsungTvManager(private val context: Context) {
                 put("TypeOfRemote", "SendRemoteKey")
             })
         }
+        webSocket?.send(payload.toString())
+    }
 
+    // সরাসরি টিভির টেক্সট বক্সে স্ট্রিং পাঠানো
+    fun sendText(text: String) {
+        if (webSocket == null || !isConnected) return
+
+        val encodedText = Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP)
+        val payload = JSONObject().apply {
+            put("method", "ms.remote.control")
+            put("params", JSONObject().apply {
+                put("Cmd", encodedText)
+                put("DataOfCmd", "base64")
+                put("TypeOfRemote", "SendInputString")
+            })
+        }
         webSocket?.send(payload.toString())
     }
 
