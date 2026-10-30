@@ -48,14 +48,12 @@ class SamsungTvManager(private val context: Context) {
             .build()
     }
 
-    // স্মার্ট ডুয়াল স্ক্যান: SSDP মাল্টিকাস্ট + লোকাল সাবনেট পোর্ট স্ক্যান
     fun autoDiscoverTv() {
         CoroutineScope(Dispatchers.IO).launch {
             withContext(Dispatchers.Main) { onStatusChanged?.invoke("Scanning local network...") }
 
             var foundIp: String? = null
 
-            // টেকনিক ১: SSDP Multicast
             try {
                 val ssdpMessage = "M-SEARCH * HTTP/1.1\r\n" +
                         "HOST: 239.255.255.250:1900\r\n" +
@@ -90,18 +88,16 @@ class SamsungTvManager(private val context: Context) {
                 socket.close()
             } catch (_: Exception) {}
 
-            // টেকনিক ২: সাবনেট ফাস্ট পোর্ট সুইপ (যদি SSDP ফেইল করে)
             if (foundIp == null) {
                 val baseSubnet = getLocalSubnetPrefix()
                 if (baseSubnet.isNotEmpty()) {
                     val jobs = mutableListOf<Deferred<String?>>()
-                    // সাধারণত টিভিগুলো প্রথম ৫০ বা ১০০ আইপিতে থাকে
                     for (i in 2..254) {
                         val targetIp = "$baseSubnet.$i"
                         val job = async {
                             try {
                                 val s = Socket()
-                                s.connect(InetSocketAddress(targetIp, 8002), 250) // TV WSS Port Check
+                                s.connect(InetSocketAddress(targetIp, 8002), 250)
                                 s.close()
                                 targetIp
                             } catch (_: Exception) {
@@ -125,7 +121,7 @@ class SamsungTvManager(private val context: Context) {
                         onStatusChanged?.invoke("Trying saved IP: $saved")
                         connect(saved)
                     } else {
-                        onStatusChanged?.invoke("TV Not Found. Tap 'Set IP'")
+                        onStatusChanged?.invoke("TV Not Found. Tap '⋮' to set IP")
                         onScanFailed?.invoke()
                     }
                 }
@@ -209,6 +205,26 @@ class SamsungTvManager(private val context: Context) {
                 put("DataOfCmd", key)
                 put("Option", "false")
                 put("TypeOfRemote", "SendRemoteKey")
+            })
+        }
+        webSocket?.send(payload.toString())
+    }
+
+    // টেক্সট ইনপুট ইনজেকশন (ভয়েস বা কিবোর্ড থেকে টিভিতে পাঠানোর জন্য)
+    fun sendText(text: String) {
+        if (!isConnected || webSocket == null) {
+            val savedIp = getSavedIp()
+            if (savedIp.isNotEmpty()) connect(savedIp)
+            return
+        }
+        val textBase64 = Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP)
+        val payload = JSONObject().apply {
+            put("method", "ms.remote.control")
+            put("params", JSONObject().apply {
+                put("Cmd", textBase64)
+                put("DataOfCmd", "base64")
+                put("Option", "false")
+                put("TypeOfRemote", "SendInputString")
             })
         }
         webSocket?.send(payload.toString())
