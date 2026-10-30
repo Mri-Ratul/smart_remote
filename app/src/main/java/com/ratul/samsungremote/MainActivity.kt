@@ -14,9 +14,11 @@ import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -31,7 +33,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var isAirMouseActive = false
     private var multicastLock: WifiManager.MulticastLock? = null
 
-    // Views
     private lateinit var containerButtons: ScrollView
     private lateinit var containerTouchpad: View
     private lateinit var containerAirMouse: View
@@ -44,7 +45,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // ১. ওয়াইফাই মাল্টিকাস্ট লক অ্যাক্টিভ করা (টিভি অটো স্ক্যানিং ক্র্যাশ আটকানোর জন্য)
         try {
             val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             multicastLock = wifi.createMulticastLock("samsung_remote_lock").apply {
@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         tvManager = SamsungTvManager(this)
 
-        // ২. সেন্সর ম্যানেজার ইনিশিয়ালাইজেশন
         try {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
             gyroscopeSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
@@ -78,16 +77,34 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
+        // স্ক্যান ফেইল করলে অটো ডায়ালগ ওপেন হবে
+        tvManager.onScanFailed = {
+            runOnUiThread {
+                showManualIpDialog()
+            }
+        }
+
+        // Scan বাটন লং-প্রেস করলে বা টিভি স্ট্যাটাসে ট্যাপ করলেও সরাসরি ম্যানুয়াল ইনপুট ডায়ালগ আসবে
         btnScan.setOnClickListener { tvManager.autoDiscoverTv() }
-        tvManager.autoDiscoverTv()
+        btnScan.setOnLongClickListener {
+            showManualIpDialog()
+            true
+        }
+        tvStatus.setOnClickListener {
+            showManualIpDialog()
+        }
 
-        // ৩. রিমোট বাটন সেটআপ
+        val savedIp = tvManager.getSavedIp()
+        if (savedIp.isNotEmpty()) {
+            tvManager.connect(savedIp)
+        } else {
+            tvManager.autoDiscoverTv()
+        }
+
         setupClassicButtons()
-
-        // ৪. ব্লুটুথ পারমিশন চেক করে মাউস ইঞ্জিন চালু করা
         checkBluetoothPermissionsAndInit()
 
-        // ৫. টাচপ্যাড সারফেস সেটআপ
+        // Touchpad
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
         mouseSurface.setOnTouchListener { _, event ->
             when (event.action) {
@@ -115,7 +132,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             btMouseManager?.sendMouseClick(isRightClick = true)
         }
 
-        // ৬. এয়ার মাউস ট্রিগার সেটআপ
+        // Air Mouse
         val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
         btnAirTrigger.setOnTouchListener { _, event ->
             when (event.action) {
@@ -135,8 +152,29 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             btMouseManager?.sendMouseClick(isRightClick = false)
         }
 
-        // ৭. ট্যাব সুইচিং
         setupTabSwitching()
+    }
+
+    // ম্যানুয়াল IP ডায়ালগ: যেখানে ইউজার সরাসরি IP বসাতে পারবে
+    private fun showManualIpDialog() {
+        val input = EditText(this).apply {
+            hint = "e.g. 192.168.0.105"
+            setText(tvManager.getSavedIp())
+            setPadding(50, 40, 50, 40)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Samsung TV IP Address")
+            .setMessage("Enter the local IP address of your TV:")
+            .setView(input)
+            .setPositiveButton("Connect") { _, _ ->
+                val ip = input.text.toString().trim()
+                if (ip.isNotEmpty()) {
+                    tvManager.connect(ip)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun checkBluetoothPermissionsAndInit() {
@@ -154,7 +192,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 return
             }
         }
-
         startBluetoothMouse()
     }
 
@@ -162,15 +199,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         try {
             btMouseManager = BluetoothMouseManager(this).apply {
                 onStatusChanged = { status ->
-                    runOnUiThread {
-                        Toast.makeText(this@MainActivity, status, Toast.LENGTH_SHORT).show()
-                    }
+                    runOnUiThread { Toast.makeText(this@MainActivity, status, Toast.LENGTH_SHORT).show() }
                 }
                 init()
             }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Bluetooth HID unavailable on this device", Toast.LENGTH_SHORT).show()
-        }
+        } catch (_: Exception) {}
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -178,8 +211,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (requestCode == 101) {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 startBluetoothMouse()
-            } else {
-                Toast.makeText(this, "Bluetooth permission needed for Mouse & Air Mouse", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -282,12 +313,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || !isAirMouseActive) return
-
         if (event.sensor.type == Sensor.TYPE_GYROSCOPE) {
             val speedFactor = 15f
             val dx = (-event.values[2] * speedFactor).toInt()
             val dy = (-event.values[0] * speedFactor).toInt()
-
             if (dx != 0 || dy != 0) {
                 btMouseManager?.sendMouseMovement(dx, dy)
             }
