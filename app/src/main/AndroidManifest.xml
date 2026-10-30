@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
+    <!-- ভয়েস ইনপুটের জন্য মাইক্রোফোন পারমিশন -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Bluetooth Classic & HID Permissions -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -15,6 +18,13 @@
 
     <!-- Gyroscope Hardware Feature -->
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
+
+    <!-- অ্যান্ড্রয়েড ১১+ এ গুগল স্পিচ রিকগনিশন অ্যাক্সেস নিশ্চিত করার জন্য -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
