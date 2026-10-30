@@ -1,11 +1,15 @@
 package com.ratul.samsungremote
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -14,15 +18,18 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var tvManager: SamsungTvManager
-    private lateinit var btMouseManager: BluetoothMouseManager
+    private var btMouseManager: BluetoothMouseManager? = null
 
-    private lateinit var sensorManager: SensorManager
+    private var sensorManager: SensorManager? = null
     private var gyroscopeSensor: Sensor? = null
     private var isAirMouseActive = false
+    private var multicastLock: WifiManager.MulticastLock? = null
 
     // Views
     private lateinit var containerButtons: ScrollView
@@ -37,12 +44,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        tvManager = SamsungTvManager(this)
-        btMouseManager = BluetoothMouseManager(this)
-        btMouseManager.init()
+        // ১. ওয়াইফাই মাল্টিকাস্ট লক অ্যাক্টিভ করা (টিভি অটো স্ক্যানিং ক্র্যাশ আটকানোর জন্য)
+        try {
+            val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            multicastLock = wifi.createMulticastLock("samsung_remote_lock").apply {
+                setReferenceCounted(true)
+                acquire()
+            }
+        } catch (_: Exception) {}
 
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        tvManager = SamsungTvManager(this)
+
+        // ২. সেন্সর ম্যানেজার ইনিশিয়ালাইজেশন
+        try {
+            sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            gyroscopeSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        } catch (_: Exception) {}
 
         val tvStatus = findViewById<TextView>(R.id.tvTvStatus)
         val btnScan = findViewById<Button>(R.id.btnScan)
@@ -55,19 +72,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             runOnUiThread { tvStatus.text = status }
         }
 
-        btMouseManager.onStatusChanged = { status ->
+        tvManager.onTvDiscovered = { ip ->
             runOnUiThread {
-                Toast.makeText(this, status, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Found TV at $ip! Connecting...", Toast.LENGTH_SHORT).show()
             }
         }
 
         btnScan.setOnClickListener { tvManager.autoDiscoverTv() }
         tvManager.autoDiscoverTv()
 
-        // 1. Buttons View Setup (Classic Remote)
+        // ৩. রিমোট বাটন সেটআপ
         setupClassicButtons()
 
-        // 2. Touchpad Trackpad Drag Setup
+        // ৪. ব্লুটুথ পারমিশন চেক করে মাউস ইঞ্জিন চালু করা
+        checkBluetoothPermissionsAndInit()
+
+        // ৫. টাচপ্যাড সারফেস সেটআপ
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
         mouseSurface.setOnTouchListener { _, event ->
             when (event.action) {
@@ -79,7 +99,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val dx = ((event.x - lastTouchX) * 1.5f).toInt()
                     val dy = ((event.y - lastTouchY) * 1.5f).toInt()
                     if (dx != 0 || dy != 0) {
-                        btMouseManager.sendMouseMovement(dx, dy)
+                        btMouseManager?.sendMouseMovement(dx, dy)
                         lastTouchX = event.x
                         lastTouchY = event.y
                     }
@@ -89,13 +109,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
-            btMouseManager.sendMouseClick(isRightClick = false)
+            btMouseManager?.sendMouseClick(isRightClick = false)
         }
         findViewById<Button>(R.id.btnRightClick).setOnClickListener {
-            btMouseManager.sendMouseClick(isRightClick = true)
+            btMouseManager?.sendMouseClick(isRightClick = true)
         }
 
-        // 3. Air Mouse Setup (Push to Aim)
+        // ৬. এয়ার মাউস ট্রিগার সেটআপ
         val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
         btnAirTrigger.setOnTouchListener { _, event ->
             when (event.action) {
@@ -112,11 +132,56 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         findViewById<Button>(R.id.btnAirClick).setOnClickListener {
-            btMouseManager.sendMouseClick(isRightClick = false)
+            btMouseManager?.sendMouseClick(isRightClick = false)
         }
 
-        // 4. Tab Mode Switcher
+        // ৭. ট্যাব সুইচিং
         setupTabSwitching()
+    }
+
+    private fun checkBluetoothPermissionsAndInit() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val permissionsNeeded = mutableListOf<String>()
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            }
+
+            if (permissionsNeeded.isNotEmpty()) {
+                ActivityCompat.requestPermissions(this, permissionsNeeded.toTypedArray(), 101)
+                return
+            }
+        }
+
+        startBluetoothMouse()
+    }
+
+    private fun startBluetoothMouse() {
+        try {
+            btMouseManager = BluetoothMouseManager(this).apply {
+                onStatusChanged = { status ->
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, status, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                init()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Bluetooth HID unavailable on this device", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 101) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                startBluetoothMouse()
+            } else {
+                Toast.makeText(this, "Bluetooth permission needed for Mouse & Air Mouse", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun setupTabSwitching() {
@@ -196,37 +261,35 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         findViewById<Button>(R.id.btnReturn).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
         findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
 
+        findViewById<Button>(R.id.btnRewind).setOnClickListener { tvManager.sendKey("KEY_REWIND") }
         findViewById<Button>(R.id.btnPlay).setOnClickListener { tvManager.sendKey("KEY_PLAY") }
         findViewById<Button>(R.id.btnPause).setOnClickListener { tvManager.sendKey("KEY_PAUSE") }
         findViewById<Button>(R.id.btnStop).setOnClickListener { tvManager.sendKey("KEY_STOP") }
-        findViewById<Button>(R.id.btnRewind).setOnClickListener { tvManager.sendKey("KEY_REWIND") }
         findViewById<Button>(R.id.btnFastForward).setOnClickListener { tvManager.sendKey("KEY_FF") }
     }
 
     override fun onResume() {
         super.onResume()
         gyroscopeSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
 
     override fun onPause() {
         super.onPause()
-        sensorManager.unregisterListener(this)
+        sensorManager?.unregisterListener(this)
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || !isAirMouseActive) return
 
         if (event.sensor.type == Sensor.TYPE_GYROSCOPE) {
-            // Horizontal movement = -Z axis or Y axis tilt
-            // Vertical movement = -X axis tilt
             val speedFactor = 15f
             val dx = (-event.values[2] * speedFactor).toInt()
             val dy = (-event.values[0] * speedFactor).toInt()
 
             if (dx != 0 || dy != 0) {
-                btMouseManager.sendMouseMovement(dx, dy)
+                btMouseManager?.sendMouseMovement(dx, dy)
             }
         }
     }
@@ -235,7 +298,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            if (multicastLock?.isHeld == true) {
+                multicastLock?.release()
+            }
+        } catch (_: Exception) {}
         tvManager.disconnect()
-        btMouseManager.cleanup()
+        btMouseManager?.cleanup()
     }
 }
