@@ -1,133 +1,128 @@
 package com.ratul.samsungremote
 
-import android.content.Context
-import android.util.Base64
-import android.util.Log
-import okhttp3.*
-import org.json.JSONObject
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
-import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
+import android.annotation.SuppressLint
+import android.os.Bundle
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import kotlin.math.abs
 
-class SamsungTvManager(private val context: Context) {
+class MainActivity : AppCompatActivity() {
 
-    private val tag = "SamsungTvManager"
-    private val prefs = context.getSharedPreferences("samsung_remote_prefs", Context.MODE_PRIVATE)
-    private var webSocket: WebSocket? = null
-    private var isConnected = false
+    private lateinit var tvManager: SamsungTvManager
+    private lateinit var gestureDetector: GestureDetector
 
-    var onStatusChanged: ((String) -> Unit)? = null
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-    private fun getUnsafeOkHttpClient(): OkHttpClient {
-        val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-        })
+        tvManager = SamsungTvManager(this)
 
-        val sslContext = SSLContext.getInstance("SSL")
-        sslContext.init(null, trustAllCerts, SecureRandom())
+        val etTvIp = findViewById<EditText>(R.id.etTvIp)
+        val btnConnect = findViewById<Button>(R.id.btnConnect)
+        val tvStatus = findViewById<TextView>(R.id.tvStatus)
+        val etSearchText = findViewById<EditText>(R.id.etSearchText)
+        val btnSendText = findViewById<Button>(R.id.btnSendText)
+        val touchTrackpad = findViewById<View>(R.id.touchTrackpad)
 
-        return OkHttpClient.Builder()
-            .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
-            .hostnameVerifier { _, _ -> true }
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.MILLISECONDS)
-            .build()
-    }
-
-    fun connect(tvIp: String) {
-        prefs.edit().putString("tv_ip", tvIp).apply()
-        val savedToken = prefs.getString("auth_token", "") ?: ""
-
-        val appNameBase64 = Base64.encodeToString("Samsung Smart Remote".toByteArray(), Base64.NO_WRAP)
-        val url = if (savedToken.isNotEmpty()) {
-            "wss://$tvIp:8002/api/v2/channels/samsung.remote.control?name=$appNameBase64&token=$savedToken"
-        } else {
-            "wss://$tvIp:8002/api/v2/channels/samsung.remote.control?name=$appNameBase64"
+        val savedIp = tvManager.getSavedIp()
+        if (savedIp.isNotEmpty()) {
+            etTvIp.setText(savedIp)
         }
 
-        onStatusChanged?.invoke("Connecting to $tvIp...")
-        val request = Request.Builder().url(url).build()
+        tvManager.onStatusChanged = { status ->
+            runOnUiThread { tvStatus.text = "Status: $status" }
+        }
 
-        webSocket?.close(1000, "Reconnecting")
-        webSocket = getUnsafeOkHttpClient().newWebSocket(request, object : WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: Response) {
-                isConnected = true
-                onStatusChanged?.invoke("Connected")
+        btnConnect.setOnClickListener {
+            val ip = etTvIp.text.toString().trim()
+            if (ip.isEmpty()) {
+                Toast.makeText(this, "Please enter your TV's IP", Toast.LENGTH_SHORT).show()
+            } else {
+                tvManager.connect(ip)
+            }
+        }
+
+        // Direct Text Send
+        btnSendText.setOnClickListener {
+            val text = etSearchText.text.toString().trim()
+            if (text.isNotEmpty()) {
+                tvManager.sendText(text)
+                etSearchText.setText("")
+            }
+        }
+
+        // Trackpad Gestures Setup
+        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            private val swipeThreshold = 50
+            private val swipeVelocityThreshold = 50
+
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                tvManager.sendKey("KEY_ENTER")
+                return true
             }
 
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                Log.d(tag, "Message from TV: $text")
-                try {
-                    val json = JSONObject(text)
-                    if (json.optString("event") == "ms.channel.connect") {
-                        val data = json.optJSONObject("data")
-                        val token = data?.optString("token", "") ?: ""
-                        if (token.isNotEmpty()) {
-                            prefs.edit().putString("auth_token", token).apply()
-                            onStatusChanged?.invoke("Connected & Paired")
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 == null) return false
+                val diffY = e2.y - e1.y
+                val diffX = e2.x - e1.x
+
+                if (abs(diffX) > abs(diffY)) {
+                    if (abs(diffX) > swipeThreshold && abs(velocityX) > swipeVelocityThreshold) {
+                        if (diffX > 0) {
+                            tvManager.sendKey("KEY_RIGHT")
+                        } else {
+                            tvManager.sendKey("KEY_LEFT")
                         }
+                        return true
                     }
-                } catch (e: Exception) {
-                    Log.e(tag, "Error parsing message", e)
+                } else {
+                    if (abs(diffY) > swipeThreshold && abs(velocityY) > swipeVelocityThreshold) {
+                        if (diffY > 0) {
+                            tvManager.sendKey("KEY_DOWN")
+                        } else {
+                            tvManager.sendKey("KEY_UP")
+                        }
+                        return true
+                    }
                 }
-            }
-
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                isConnected = false
-                onStatusChanged?.invoke("Disconnected: ${t.localizedMessage}")
-            }
-
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                isConnected = false
-                onStatusChanged?.invoke("Disconnected")
+                return false
             }
         })
-    }
 
-    fun sendKey(key: String) {
-        if (webSocket == null || !isConnected) {
-            onStatusChanged?.invoke("Not connected to TV!")
-            return
+        touchTrackpad.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+            true
         }
 
-        val payload = JSONObject().apply {
-            put("method", "ms.remote.control")
-            put("params", JSONObject().apply {
-                put("Cmd", "Click")
-                put("DataOfCmd", key)
-                put("Option", "false")
-                put("TypeOfRemote", "SendRemoteKey")
-            })
-        }
-        webSocket?.send(payload.toString())
+        // Action Buttons
+        findViewById<Button>(R.id.btnPower).setOnClickListener { tvManager.sendKey("KEY_POWER") }
+        findViewById<Button>(R.id.btnSource).setOnClickListener { tvManager.sendKey("KEY_SOURCE") }
+        findViewById<Button>(R.id.btnMute).setOnClickListener { tvManager.sendKey("KEY_MUTE") }
+
+        findViewById<Button>(R.id.btnBack).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
+        findViewById<Button>(R.id.btnHome).setOnClickListener { tvManager.sendKey("KEY_HOME") }
+        findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
+
+        findViewById<Button>(R.id.btnVolUp).setOnClickListener { tvManager.sendKey("KEY_VOLUP") }
+        findViewById<Button>(R.id.btnVolDown).setOnClickListener { tvManager.sendKey("KEY_VOLDOWN") }
+        findViewById<Button>(R.id.btnChUp).setOnClickListener { tvManager.sendKey("KEY_CHUP") }
+        findViewById<Button>(R.id.btnChDown).setOnClickListener { tvManager.sendKey("KEY_CHDOWN") }
     }
 
-    // সরাসরি টিভির টেক্সট বক্সে স্ট্রিং পাঠানো
-    fun sendText(text: String) {
-        if (webSocket == null || !isConnected) return
-
-        val encodedText = Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP)
-        val payload = JSONObject().apply {
-            put("method", "ms.remote.control")
-            put("params", JSONObject().apply {
-                put("Cmd", encodedText)
-                put("DataOfCmd", "base64")
-                put("TypeOfRemote", "SendInputString")
-            })
-        }
-        webSocket?.send(payload.toString())
+    override fun onDestroy() {
+        super.onDestroy()
+        tvManager.disconnect()
     }
-
-    fun disconnect() {
-        webSocket?.close(1000, "App closed")
-        webSocket = null
-        isConnected = false
-    }
-
-    fun getSavedIp(): String = prefs.getString("tv_ip", "") ?: ""
 }
