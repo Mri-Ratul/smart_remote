@@ -1,6 +1,7 @@
 package com.ratul.samsungremote
 
 import android.content.Context
+import android.net.wifi.WifiManager
 import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.*
@@ -9,6 +10,8 @@ import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
@@ -26,6 +29,7 @@ class SamsungTvManager(private val context: Context) {
 
     var onStatusChanged: ((String) -> Unit)? = null
     var onTvDiscovered: ((String) -> Unit)? = null
+    var onScanFailed: (() -> Unit)? = null
 
     private val client: OkHttpClient by lazy {
         val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
@@ -39,16 +43,20 @@ class SamsungTvManager(private val context: Context) {
         OkHttpClient.Builder()
             .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
             .hostnameVerifier { _, _ -> true }
-            .connectTimeout(4, TimeUnit.SECONDS)
+            .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .build()
     }
 
-    // লোকাল নেটওয়ার্কে স্যামসাং টিভি অটো-ডিটেকশন (SSDP Protocol)
+    // স্মার্ট ডুয়াল স্ক্যান: SSDP মাল্টিকাস্ট + লোকাল সাবনেট পোর্ট স্ক্যান
     fun autoDiscoverTv() {
         CoroutineScope(Dispatchers.IO).launch {
+            withContext(Dispatchers.Main) { onStatusChanged?.invoke("Scanning local network...") }
+
+            var foundIp: String? = null
+
+            // টেকনিক ১: SSDP Multicast
             try {
-                onStatusChanged?.invoke("Scanning network for Samsung TV...")
                 val ssdpMessage = "M-SEARCH * HTTP/1.1\r\n" +
                         "HOST: 239.255.255.250:1900\r\n" +
                         "MAN: \"ssdp:discover\"\r\n" +
@@ -56,7 +64,7 @@ class SamsungTvManager(private val context: Context) {
                         "ST: urn:samsung.com:device:RemoteControlReceiver:1\r\n\r\n"
 
                 val socket = DatagramSocket()
-                socket.soTimeout = 3000
+                socket.soTimeout = 1500
                 val sendData = ssdpMessage.toByteArray()
                 val sendPacket = DatagramPacket(
                     sendData,
@@ -68,41 +76,71 @@ class SamsungTvManager(private val context: Context) {
 
                 val buffer = ByteArray(1024)
                 val receivePacket = DatagramPacket(buffer, buffer.size)
-
-                val startTime = System.currentTimeMillis()
-                while (System.currentTimeMillis() - startTime < 3500) {
+                val start = System.currentTimeMillis()
+                while (System.currentTimeMillis() - start < 1800) {
                     try {
                         socket.receive(receivePacket)
-                        val response = String(receivePacket.data, 0, receivePacket.length)
-                        if (response.contains("Samsung") || response.contains("SEC")) {
-                            val tvIp = receivePacket.address.hostAddress ?: ""
-                            if (tvIp.isNotEmpty()) {
-                                socket.close()
-                                withContext(Dispatchers.Main) {
-                                    onTvDiscovered?.invoke(tvIp)
-                                    connect(tvIp)
-                                }
-                                return@launch
-                            }
+                        val resp = String(receivePacket.data, 0, receivePacket.length)
+                        if (resp.contains("Samsung") || resp.contains("SEC")) {
+                            foundIp = receivePacket.address.hostAddress
+                            break
                         }
-                    } catch (_: Exception) { }
+                    } catch (_: Exception) {}
                 }
                 socket.close()
-                withContext(Dispatchers.Main) {
-                    val savedIp = getSavedIp()
-                    if (savedIp.isNotEmpty()) {
-                        connect(savedIp)
-                    } else {
-                        onStatusChanged?.invoke("TV not found. Enter IP manually.")
+            } catch (_: Exception) {}
+
+            // টেকনিক ২: সাবনেট ফাস্ট পোর্ট সুইপ (যদি SSDP ফেইল করে)
+            if (foundIp == null) {
+                val baseSubnet = getLocalSubnetPrefix()
+                if (baseSubnet.isNotEmpty()) {
+                    val jobs = mutableListOf<Deferred<String?>>()
+                    // সাধারণত টিভিগুলো প্রথম ৫০ বা ১০০ আইপিতে থাকে
+                    for (i in 2..254) {
+                        val targetIp = "$baseSubnet.$i"
+                        val job = async {
+                            try {
+                                val s = Socket()
+                                s.connect(InetSocketAddress(targetIp, 8002), 250) // TV WSS Port Check
+                                s.close()
+                                targetIp
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+                        jobs.add(job)
                     }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    val savedIp = getSavedIp()
-                    if (savedIp.isNotEmpty()) connect(savedIp)
-                    else onStatusChanged?.invoke("Scan failed: ${e.message}")
+                    val results = jobs.awaitAll()
+                    foundIp = results.firstOrNull { it != null }
                 }
             }
+
+            withContext(Dispatchers.Main) {
+                if (!foundIp.isNullOrEmpty()) {
+                    onTvDiscovered?.invoke(foundIp)
+                    connect(foundIp)
+                } else {
+                    val saved = getSavedIp()
+                    if (saved.isNotEmpty()) {
+                        onStatusChanged?.invoke("Trying saved IP: $saved")
+                        connect(saved)
+                    } else {
+                        onStatusChanged?.invoke("TV Not Found. Tap 'Set IP'")
+                        onScanFailed?.invoke()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getLocalSubnetPrefix(): String {
+        try {
+            val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val ipInt = wifi.connectionInfo.ipAddress
+            if (ipInt == 0) return ""
+            return "${ipInt and 0xFF}.${ipInt shr 8 and 0xFF}.${ipInt shr 16 and 0xFF}"
+        } catch (_: Exception) {
+            return ""
         }
     }
 
@@ -123,7 +161,7 @@ class SamsungTvManager(private val context: Context) {
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 isConnected = true
-                onStatusChanged?.invoke("Connected to Samsung TV")
+                onStatusChanged?.invoke("Connected: $tvIp")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -143,7 +181,7 @@ class SamsungTvManager(private val context: Context) {
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 isConnected = false
-                onStatusChanged?.invoke("Disconnected: ${t.localizedMessage}")
+                onStatusChanged?.invoke("Failed: Check TV/IP")
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -156,7 +194,11 @@ class SamsungTvManager(private val context: Context) {
     fun sendKey(key: String) {
         if (!isConnected || webSocket == null) {
             val savedIp = getSavedIp()
-            if (savedIp.isNotEmpty()) connect(savedIp)
+            if (savedIp.isNotEmpty()) {
+                connect(savedIp)
+            } else {
+                onScanFailed?.invoke()
+            }
             return
         }
 
@@ -172,20 +214,17 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // সরাসরি ইউটিউব অ্যাপ লঞ্চ করা
     fun launchYouTube() {
         val tvIp = getSavedIp()
         if (tvIp.isEmpty()) return
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Tizen REST API to open YouTube
                 val request = Request.Builder()
                     .url("http://$tvIp:8001/api/v2/applications/111299001912")
                     .post(RequestBody.create(null, ByteArray(0)))
                     .build()
                 client.newCall(request).execute()
             } catch (_: Exception) {
-                // Fallback via remote key
                 sendKey("KEY_YOUTUBE")
             }
         }
