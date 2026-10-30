@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="#0C0E14">
 
-    <!-- Top Action Bar with Centered Status and Three-Dot Menu -->
+    <!-- Top Action Bar -->
     <RelativeLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
@@ -38,14 +38,15 @@
             android:textStyle="bold" />
     </RelativeLayout>
 
-    <!-- Scrollable Body matching Physical Remote -->
+    <!-- 1. Physical Remote Buttons View -->
     <ScrollView
         android:id="@+id/containerButtons"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottomNavBar"
         android:layout_below="@id/headerLayout"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -55,7 +56,6 @@
             android:paddingHorizontal="24dp"
             android:paddingVertical="14dp">
 
-            <!-- Remote Outer Frame -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -98,7 +98,7 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <!-- Row 2: TTX/MIX, YouTube (in place of 0), PRE-CH -->
+                <!-- Row 2: TTX/MIX, YouTube, PRE-CH -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -278,7 +278,7 @@
                         android:textSize="9sp" />
                 </LinearLayout>
 
-                <!-- Row 5: E-Manual & Info Header above D-Pad -->
+                <!-- Row 5: E-Manual & Info Header -->
                 <LinearLayout
                     android:layout_width="230dp"
                     android:layout_height="wrap_content"
@@ -312,7 +312,7 @@
                         android:textSize="9sp" />
                 </LinearLayout>
 
-                <!-- Row 6: Compact D-Pad Cluster (No Distance Glitch) -->
+                <!-- Row 6: D-Pad -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -375,7 +375,7 @@
                         android:textSize="16sp" />
                 </LinearLayout>
 
-                <!-- Row 7: Return & Exit below D-Pad -->
+                <!-- Row 7: Return & Exit -->
                 <LinearLayout
                     android:layout_width="230dp"
                     android:layout_height="wrap_content"
@@ -409,7 +409,7 @@
                         android:textSize="9sp" />
                 </LinearLayout>
 
-                <!-- Row 8: PIC SIZE, PICTURE, AD/SUBT., STOP -->
+                <!-- Row 8: Extra Controls -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -462,7 +462,7 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <!-- Row 9: Media Controls (Rewind, Play, Pause, FF) -->
+                <!-- Row 9: Media Controls -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -519,56 +519,35 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Navigation Bar (4 Modes) -->
+    <!-- 2. Touchpad View -->
     <LinearLayout
-        android:id="@+id/bottomNavBar"
+        android:id="@+id/containerTouchpad"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:layout_alignParentBottom="true"
-        android:background="#131620"
-        android:elevation="8dp"
-        android:orientation="horizontal">
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
+        android:layout_below="@id/headerLayout"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:visibility="gone">
 
-        <Button
-            android:id="@+id/navButtons"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:backgroundTint="#1D2230"
-            android:text="Buttons"
-            android:textColor="#00E5FF"
-            android:textSize="11sp"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="TRACKPAD SURFACE"
+            android:textColor="#8892B0"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/navTouchpad"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
+        <View
+            android:id="@+id/mouseSurface"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
             android:layout_weight="1"
-            android:backgroundTint="#131620"
-            android:text="Touchpad"
-            android:textColor="#8892B0"
-            android:textSize="11sp" />
+            android:background="#161824" />
 
-        <Button
-            android:id="@+id/navAirMouse"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:backgroundTint="#131620"
-            android:text="Air Mouse"
-            android:textColor="#8892B0"
-            android:textSize="11sp" />
-
-        <Button
-            android:id="@+id/navAiVoice"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:backgroundTint="#131620"
-            android:text="AI Voice"
-            android:textColor="#8892B0"
-            android:textSize="11sp" />
-    </LinearLayout>
-
-</RelativeLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
