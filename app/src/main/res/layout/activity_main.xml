@@ -439,7 +439,6 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <!-- Mouse Trackpad Area -->
         <View
             android:id="@+id/mouseSurface"
             android:layout_width="match_parent"
@@ -448,7 +447,6 @@
             android:layout_weight="1"
             android:background="#16181F" />
 
-        <!-- Left / Right Click Bars -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="64dp"
@@ -493,7 +491,7 @@
             android:id="@+id/tvAirMouseStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Hold button below & wave phone at TV"
+            android:text="Hold button below and wave phone at TV"
             android:textColor="#00E5FF"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -504,7 +502,7 @@
             android:layout_height="160dp"
             android:layout_marginTop="40dp"
             android:backgroundTint="#2563EB"
-            android:text="HOLD TO\nAIM & MOVE"
+            android:text="HOLD TO&#10;AIM &amp; MOVE"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold" />
