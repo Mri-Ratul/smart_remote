@@ -34,14 +34,15 @@
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Scrollable Remote Body -->
+    <!-- CONTAINER 1: PHYSICAL BUTTONS REMOTE VIEW -->
     <ScrollView
-        android:id="@+id/remoteScrollContainer"
+        android:id="@+id/containerButtons"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottomNavBar"
         android:layout_below="@id/headerLayout"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -51,7 +52,6 @@
             android:paddingHorizontal="24dp"
             android:paddingBottom="24dp">
 
-            <!-- Physical Remote Outer Casing -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -62,7 +62,6 @@
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="18dp">
 
-                <!-- Row 1: Power & Source -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -94,7 +93,6 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <!-- Row 2: YouTube, Pre-CH, CH List -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -137,7 +135,6 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <!-- Row 3: Volume, Mute, Channel Rockers -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -145,7 +142,6 @@
                     android:gravity="center"
                     android:orientation="horizontal">
 
-                    <!-- Volume Column -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -175,7 +171,6 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- Center Mute -->
                     <Button
                         android:id="@+id/btnMute"
                         android:layout_width="65dp"
@@ -186,7 +181,6 @@
                         android:textColor="#F59E0B"
                         android:textSize="10sp" />
 
-                    <!-- Channel Column -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -217,7 +211,6 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Row 4: Settings, Home, Guide -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -260,7 +253,6 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <!-- D-Pad & Corner Utility Cluster -->
                 <RelativeLayout
                     android:layout_width="260dp"
                     android:layout_height="260dp"
@@ -310,7 +302,6 @@
                         android:textColor="#9CA3AF"
                         android:textSize="9sp" />
 
-                    <!-- D-Pad Directional Ring -->
                     <Button
                         android:id="@+id/btnUp"
                         android:layout_width="72dp"
@@ -366,7 +357,6 @@
                         android:textSize="18sp" />
                 </RelativeLayout>
 
-                <!-- Media Playback Row -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -429,7 +419,109 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Navigation Bar (4 Modules) -->
+    <!-- CONTAINER 2: TOUCHPAD VIEW -->
+    <LinearLayout
+        android:id="@+id/containerTouchpad"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
+        android:layout_below="@id/headerLayout"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="TRACKPAD SURFACE"
+            android:textColor="#9CA3AF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- Mouse Trackpad Area -->
+        <View
+            android:id="@+id/mouseSurface"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1"
+            android:background="#16181F" />
+
+        <!-- Left / Right Click Bars -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnLeftClick"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="#20242F"
+                android:text="LEFT CLICK"
+                android:textColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/btnRightClick"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="#20242F"
+                android:text="RIGHT CLICK"
+                android:textColor="#FFFFFF" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- CONTAINER 3: AIR MOUSE (GYRO) VIEW -->
+    <LinearLayout
+        android:id="@+id/containerAirMouse"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
+        android:layout_below="@id/headerLayout"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvAirMouseStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hold button below & wave phone at TV"
+            android:textColor="#00E5FF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnAirTrigger"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_marginTop="40dp"
+            android:backgroundTint="#2563EB"
+            android:text="HOLD TO\nAIM & MOVE"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnAirClick"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="40dp"
+            android:backgroundTint="#10B981"
+            android:text="SELECT / OK"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Bottom Navigation Bar (4 Modes) -->
     <LinearLayout
         android:id="@+id/bottomNavBar"
         android:layout_width="match_parent"
