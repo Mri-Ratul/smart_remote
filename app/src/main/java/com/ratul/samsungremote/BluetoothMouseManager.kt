@@ -15,36 +15,35 @@ class BluetoothMouseManager(private val context: Context) {
 
     var onStatusChanged: ((String) -> Unit)? = null
 
-    // Standard HID Report Descriptor for Mouse
     private val hidReportDescriptor = byteArrayOf(
-        0x05.toByte(), 0x01.toByte(), // USAGE_PAGE (Generic Desktop)
-        0x09.toByte(), 0x02.toByte(), // USAGE (Mouse)
-        0xa1.toByte(), 0x01.toByte(), // COLLECTION (Application)
-        0x85.toByte(), 0x01.toByte(), //   REPORT_ID (1)
-        0x09.toByte(), 0x01.toByte(), //   USAGE (Pointer)
-        0xa1.toByte(), 0x00.toByte(), //   COLLECTION (Physical)
-        0x05.toByte(), 0x09.toByte(), //     USAGE_PAGE (Button)
-        0x19.toByte(), 0x01.toByte(), //     USAGE_MINIMUM (Button 1)
-        0x29.toByte(), 0x03.toByte(), //     USAGE_MAXIMUM (Button 3)
-        0x15.toByte(), 0x00.toByte(), //     LOGICAL_MINIMUM (0)
-        0x25.toByte(), 0x01.toByte(), //     LOGICAL_MAXIMUM (1)
-        0x95.toByte(), 0x03.toByte(), //     REPORT_COUNT (3)
-        0x75.toByte(), 0x01.toByte(), //     REPORT_SIZE (1)
-        0x81.toByte(), 0x02.toByte(), //     INPUT (Data,Var,Abs)
-        0x95.toByte(), 0x01.toByte(), //     REPORT_COUNT (1)
-        0x75.toByte(), 0x05.toByte(), //     REPORT_SIZE (5)
-        0x81.toByte(), 0x03.toByte(), //     INPUT (Cnst,Var,Abs)
-        0x05.toByte(), 0x01.toByte(), //     USAGE_PAGE (Generic Desktop)
-        0x09.toByte(), 0x30.toByte(), //     USAGE (X)
-        0x09.toByte(), 0x31.toByte(), //     USAGE (Y)
-        0x09.toByte(), 0x38.toByte(), //     USAGE (Wheel)
-        0x15.toByte(), 0x81.toByte(), //     LOGICAL_MINIMUM (-127)
-        0x25.toByte(), 0x7f.toByte(), //     LOGICAL_MAXIMUM (127)
-        0x75.toByte(), 0x08.toByte(), //     REPORT_SIZE (8)
-        0x95.toByte(), 0x03.toByte(), //     REPORT_COUNT (3)
-        0x81.toByte(), 0x06.toByte(), //     INPUT (Data,Var,Rel)
-        0xc0.toByte(),                //   END_COLLECTION
-        0xc0.toByte()                 // END_COLLECTION
+        0x05.toByte(), 0x01.toByte(),
+        0x09.toByte(), 0x02.toByte(),
+        0xa1.toByte(), 0x01.toByte(),
+        0x85.toByte(), 0x01.toByte(),
+        0x09.toByte(), 0x01.toByte(),
+        0xa1.toByte(), 0x00.toByte(),
+        0x05.toByte(), 0x09.toByte(),
+        0x19.toByte(), 0x01.toByte(),
+        0x29.toByte(), 0x03.toByte(),
+        0x15.toByte(), 0x00.toByte(),
+        0x25.toByte(), 0x01.toByte(),
+        0x95.toByte(), 0x03.toByte(),
+        0x75.toByte(), 0x01.toByte(),
+        0x81.toByte(), 0x02.toByte(),
+        0x95.toByte(), 0x01.toByte(),
+        0x75.toByte(), 0x05.toByte(),
+        0x81.toByte(), 0x03.toByte(),
+        0x05.toByte(), 0x01.toByte(),
+        0x09.toByte(), 0x30.toByte(),
+        0x09.toByte(), 0x31.toByte(),
+        0x09.toByte(), 0x38.toByte(),
+        0x15.toByte(), 0x81.toByte(),
+        0x25.toByte(), 0x7f.toByte(),
+        0x75.toByte(), 0x08.toByte(),
+        0x95.toByte(), 0x03.toByte(),
+        0x81.toByte(), 0x06.toByte(),
+        0xc0.toByte(),
+        0xc0.toByte()
     )
 
     private val profileServiceListener = object : BluetoothProfile.ServiceListener {
@@ -84,25 +83,32 @@ class BluetoothMouseManager(private val context: Context) {
     }
 
     fun init() {
-        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = manager.adapter
-        bluetoothAdapter?.getProfileProxy(context, profileServiceListener, BluetoothProfile.HID_DEVICE)
+        try {
+            val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            bluetoothAdapter = manager.adapter
+            bluetoothAdapter?.getProfileProxy(context, profileServiceListener, BluetoothProfile.HID_DEVICE)
+        } catch (e: Exception) {
+            Log.e(tag, "Bluetooth init failed", e)
+        }
     }
 
     private fun registerApp() {
-        // 0x02.toByte() represents SUBCLASS_MOUSE in Bluetooth HID profile specification
-        val sdpSettings = BluetoothHidDeviceAppSdpSettings(
-            "Smart Remote Mouse",
-            "Samsung TV Controller",
-            "Ratul",
-            0x02.toByte(),
-            hidReportDescriptor
-        )
-        val qosSettings = BluetoothHidDeviceAppQosSettings(
-            BluetoothHidDeviceAppQosSettings.SERVICE_BEST_EFFORT,
-            800, 9, 0, 11250, -1
-        )
-        hidDevice?.registerApp(sdpSettings, null, qosSettings, context.mainExecutor, hidCallback)
+        try {
+            val sdpSettings = BluetoothHidDeviceAppSdpSettings(
+                "Smart Remote Mouse",
+                "Samsung TV Controller",
+                "Ratul",
+                0x02.toByte(),
+                hidReportDescriptor
+            )
+            val qosSettings = BluetoothHidDeviceAppQosSettings(
+                BluetoothHidDeviceAppQosSettings.SERVICE_BEST_EFFORT,
+                800, 9, 0, 11250, -1
+            )
+            hidDevice?.registerApp(sdpSettings, null, qosSettings, context.mainExecutor, hidCallback)
+        } catch (e: Exception) {
+            Log.e(tag, "Register App failed", e)
+        }
     }
 
     fun sendMouseMovement(dx: Int, dy: Int, leftButton: Boolean = false, rightButton: Boolean = false) {
@@ -115,21 +121,25 @@ class BluetoothMouseManager(private val context: Context) {
         if (rightButton) buttons = (buttons.toInt() or 0x02).toByte()
 
         val report = byteArrayOf(buttons, clampedX, clampedY, 0)
-        hidDevice?.sendReport(device, 1, report)
+        try {
+            hidDevice?.sendReport(device, 1, report)
+        } catch (_: Exception) {}
     }
 
     fun sendMouseClick(isRightClick: Boolean = false) {
         val device = hostDevice ?: return
         val buttonByte = if (isRightClick) 0x02.toByte() else 0x01.toByte()
 
-        // Button Down
-        hidDevice?.sendReport(device, 1, byteArrayOf(buttonByte, 0, 0, 0))
-        // Button Up
-        hidDevice?.sendReport(device, 1, byteArrayOf(0, 0, 0, 0))
+        try {
+            hidDevice?.sendReport(device, 1, byteArrayOf(buttonByte, 0, 0, 0))
+            hidDevice?.sendReport(device, 1, byteArrayOf(0, 0, 0, 0))
+        } catch (_: Exception) {}
     }
 
     fun cleanup() {
-        hidDevice?.unregisterApp()
-        bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
+        try {
+            hidDevice?.unregisterApp()
+            bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
+        } catch (_: Exception) {}
     }
 }
