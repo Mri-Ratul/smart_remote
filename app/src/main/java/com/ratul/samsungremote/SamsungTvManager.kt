@@ -138,9 +138,8 @@ class SamsungTvManager(private val context: Context) {
             val ipInt = wifi.connectionInfo.ipAddress
             if (ipInt == 0) return ""
             return "${ipInt and 0xFF}.${ipInt shr 8 and 0xFF}.${ipInt shr 16 and 0xFF}"
-        } catch (_: Exception) {
-            return ""
-        }
+        } catch (_: Exception) {}
+        return ""
     }
 
     fun connect(rawIp: String) {
@@ -215,7 +214,7 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // টাইজেন ব্রাউজার পয়েন্টার মুভমেন্ট (অফিশিয়াল SendPointerEvent প্রোটোকল)
+    // টাইজেন ব্রাউজার পয়েন্টার ইভেন্ট (যদি ব্রাউজারে সাপোর্ট করে)
     fun sendPointerMove(dx: Int, dy: Int) {
         if (!isConnected || webSocket == null) return
 
@@ -233,7 +232,6 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // টাইজেন ব্রাউজার মাউস ক্লিক
     fun sendPointerClick() {
         if (!isConnected || webSocket == null) return
 
@@ -247,25 +245,21 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // পিকচার মোড সাইকেল
     fun cyclePictureMode() {
         sendKey("KEY_PICTURE_MODE")
         sendKey("KEY_PMODE")
     }
 
-    // পিকচার সাইজ
     fun togglePicSize() {
         sendKey("KEY_ASPECT")
         sendKey("KEY_ZOOM")
     }
 
-    // সাবটাইটেল
     fun toggleSubtitle() {
         sendKey("KEY_SUB_TITLE")
         sendKey("KEY_CAPTION")
     }
 
-    // সাধারণ টেক্সট পাঠানো
     fun sendText(text: String) {
         if (!isConnected || webSocket == null) {
             val savedIp = getSavedIp()
@@ -286,7 +280,6 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // ইউটিউব সরাসরি ওপেন করা
     fun launchYouTube() {
         val tvIp = getSavedIp()
         if (tvIp.isEmpty()) return
@@ -303,7 +296,6 @@ class SamsungTvManager(private val context: Context) {
         }
     }
 
-    // ইউটিউব অ্যাপে ভয়েস সার্চ ডায়রেক্ট এক্সিকিউট করা
     fun launchYouTubeWithSearch(query: String) {
         val tvIp = getSavedIp()
         if (tvIp.isEmpty()) return
