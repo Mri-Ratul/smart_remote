@@ -98,7 +98,7 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <!-- Row 2: TTX/MIX, YouTube (in place of 0), PRE-CH -->
+                <!-- Row 2: TTX/MIX, YouTube, PRE-CH -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -519,7 +519,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- 2. Touchpad Surface Container -->
+    <!-- 2. Touchpad Surface Container (Wi-Fi Powered) -->
     <LinearLayout
         android:id="@+id/containerTouchpad"
         android:layout_width="match_parent"
@@ -534,8 +534,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="TRACKPAD SURFACE"
-            android:textColor="#8892B0"
+            android:text="WI-FI TRACKPAD SURFACE"
+            android:textColor="#00E5FF"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -570,12 +570,12 @@
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:backgroundTint="#202433"
-                android:text="RIGHT CLICK"
+                android:text="RIGHT CLICK / BACK"
                 android:textColor="#FFFFFF" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 3. Air Mouse Container -->
+    <!-- 3. Air Mouse Container (Wi-Fi Powered Gyro) -->
     <LinearLayout
         android:id="@+id/containerAirMouse"
         android:layout_width="match_parent"
@@ -591,9 +591,9 @@
             android:id="@+id/tvAirMouseStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Hold button and point phone at TV"
+            android:text="Hold button and point phone at TV (Wi-Fi Air Mouse)"
             android:textColor="#00E5FF"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <Button
@@ -619,7 +619,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 4. Voice Input Container -->
+    <!-- 4. Voice Input Container (Bangla & English Dual Buttons) -->
     <LinearLayout
         android:id="@+id/containerAiVoice"
         android:layout_width="match_parent"
@@ -644,26 +644,48 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Tap MIC and speak (Bangla or English)"
+            android:text="Select language and tap to speak"
             android:textColor="#8892B0"
             android:textSize="13sp" />
 
-        <Button
-            android:id="@+id/btnMicTrigger"
-            android:layout_width="140dp"
-            android:layout_height="140dp"
-            android:layout_marginTop="30dp"
-            android:backgroundTint="#2563EB"
-            android:text="🎙&#10;TAP TO&#10;SPEAK"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+        <!-- Dual Mic Buttons: Bangla & English -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnMicBangla"
+                android:layout_width="0dp"
+                android:layout_height="110dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#0284C7"
+                android:text="🎙&#10;SPEAK&#10;BANGLA"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnMicEnglish"
+                android:layout_width="0dp"
+                android:layout_height="110dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#2563EB"
+                android:text="🎙&#10;SPEAK&#10;ENGLISH"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <EditText
             android:id="@+id/etTranscribedText"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_marginTop="28dp"
+            android:layout_height="90dp"
+            android:layout_marginTop="24dp"
             android:background="#161824"
             android:gravity="top|start"
             android:hint="Spoken text appears here..."
