@@ -140,24 +140,30 @@ class SamsungTvManager(private val context: Context) {
         }
     }
 
-    fun connect(tvIp: String) {
-        prefs.edit().putString("tv_ip", tvIp).apply()
+    fun connect(rawIp: String) {
+        val cleanIp = rawIp.replace("http://", "")
+            .replace("https://", "")
+            .replace("wss://", "")
+            .replace("ws://", "")
+            .split(":")[0].trim()
+
+        prefs.edit().putString("tv_ip", cleanIp).apply()
         val savedToken = prefs.getString("auth_token", "") ?: ""
         val appNameBase64 = Base64.encodeToString("Samsung Remote Pro".toByteArray(), Base64.NO_WRAP)
         val url = if (savedToken.isNotEmpty()) {
-            "wss://$tvIp:8002/api/v2/channels/samsung.remote.control?name=$appNameBase64&token=$savedToken"
+            "wss://$cleanIp:8002/api/v2/channels/samsung.remote.control?name=$appNameBase64&token=$savedToken"
         } else {
-            "wss://$tvIp:8002/api/v2/channels/samsung.remote.control?name=$appNameBase64"
+            "wss://$cleanIp:8002/api/v2/channels/samsung.remote.control?name=$appNameBase64"
         }
 
-        onStatusChanged?.invoke("Connecting to $tvIp...")
+        onStatusChanged?.invoke("Connecting to $cleanIp...")
         val request = Request.Builder().url(url).build()
 
         webSocket?.close(1000, "Reconnecting")
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 isConnected = true
-                onStatusChanged?.invoke("Connected: $tvIp")
+                onStatusChanged?.invoke("Connected: $cleanIp")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -190,11 +196,7 @@ class SamsungTvManager(private val context: Context) {
     fun sendKey(key: String) {
         if (!isConnected || webSocket == null) {
             val savedIp = getSavedIp()
-            if (savedIp.isNotEmpty()) {
-                connect(savedIp)
-            } else {
-                onScanFailed?.invoke()
-            }
+            if (savedIp.isNotEmpty()) connect(savedIp)
             return
         }
 
@@ -210,7 +212,34 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // টেক্সট ইনপুট ইনজেকশন (ভয়েস বা কিবোর্ড থেকে টিভিতে পাঠানোর জন্য)
+    // Wi-Fi ভিত্তিক মাউস মুভমেন্ট (কোনো ব্লুটুথ ছাড়াই)
+    fun sendWifiMouseMove(dx: Int, dy: Int) {
+        if (!isConnected || webSocket == null) return
+
+        val payload = JSONObject().apply {
+            put("method", "ms.remote.touchpad")
+            put("params", JSONObject().apply {
+                put("event", "move")
+                put("x", dx)
+                put("y", dy)
+            })
+        }
+        webSocket?.send(payload.toString())
+    }
+
+    // Wi-Fi ভিত্তিক মাউস ক্লিক
+    fun sendWifiMouseClick() {
+        if (!isConnected || webSocket == null) return
+
+        val payload = JSONObject().apply {
+            put("method", "ms.remote.touchpad")
+            put("params", JSONObject().apply {
+                put("event", "click")
+            })
+        }
+        webSocket?.send(payload.toString())
+    }
+
     fun sendText(text: String) {
         if (!isConnected || webSocket == null) {
             val savedIp = getSavedIp()
