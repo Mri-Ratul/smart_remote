@@ -8,21 +8,21 @@
     <RelativeLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="48dp"
         android:background="#131620"
         android:elevation="4dp"
-        android:paddingHorizontal="16dp">
+        android:paddingHorizontal="12dp">
 
         <TextView
             android:id="@+id/tvTvStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
+            android:layout_centerVertical="true"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="Samsung TV: Disconnected"
             android:textColor="#00E5FF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <Button
@@ -34,27 +34,26 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:text="⋮"
             android:textColor="#FFFFFF"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
     </RelativeLayout>
 
-    <!-- 1. Physical Buttons Remote Container -->
+    <!-- 1. Physical Remote Buttons View -->
     <ScrollView
         android:id="@+id/containerButtons"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottomNavBar"
         android:layout_below="@id/headerLayout"
-        android:fillViewport="true"
-        android:visibility="visible">
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingVertical="14dp">
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="10dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -63,10 +62,10 @@
                 android:elevation="6dp"
                 android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="14dp">
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="12dp">
 
-                <!-- Row 1: Power & Source -->
+                <!-- Row 1: Power, YouTube, Source (No Fixed Width, Auto Screen Fit) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -75,77 +74,51 @@
 
                     <Button
                         android:id="@+id/btnPower"
-                        android:layout_width="65dp"
-                        android:layout_height="48dp"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
                         android:backgroundTint="#E50914"
+                        android:maxLines="1"
+                        android:singleLine="true"
                         android:text="POWER"
                         android:textColor="#FFFFFF"
                         android:textSize="11sp"
                         android:textStyle="bold" />
 
-                    <View
-                        android:layout_width="0dp"
-                        android:layout_height="1dp"
-                        android:layout_weight="1" />
-
-                    <Button
-                        android:id="@+id/btnSource"
-                        android:layout_width="80dp"
-                        android:layout_height="44dp"
-                        android:backgroundTint="#252A38"
-                        android:text="SOURCE"
-                        android:textColor="#EEEEEE"
-                        android:textSize="10sp" />
-                </LinearLayout>
-
-                <!-- Row 2: TTX/MIX, YouTube, PRE-CH -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnTtxMix"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_margin="2dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="#252A38"
-                        android:text="TTX/MIX"
-                        android:textColor="#D1D5DB"
-                        android:textSize="10sp" />
-
                     <Button
                         android:id="@+id/btnYouTube"
                         android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_margin="2dp"
-                        android:layout_weight="1.2"
+                        android:layout_height="46dp"
+                        android:layout_marginHorizontal="4dp"
+                        android:layout_weight="1.3"
                         android:backgroundTint="#CC0000"
+                        android:maxLines="1"
+                        android:singleLine="true"
                         android:text="▶ YouTube"
                         android:textColor="#FFFFFF"
                         android:textSize="11sp"
                         android:textStyle="bold" />
 
                     <Button
-                        android:id="@+id/btnPreCh"
+                        android:id="@+id/btnSource"
                         android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_margin="2dp"
+                        android:layout_height="46dp"
+                        android:layout_marginStart="4dp"
                         android:layout_weight="1"
                         android:backgroundTint="#252A38"
-                        android:text="PRE-CH"
-                        android:textColor="#D1D5DB"
-                        android:textSize="10sp" />
+                        android:maxLines="1"
+                        android:singleLine="true"
+                        android:text="SOURCE"
+                        android:textColor="#EEEEEE"
+                        android:textSize="11sp" />
                 </LinearLayout>
 
-                <!-- Row 3: Volume & Channel Block -->
+                <!-- Row 2: Volume & Channel Block -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="10dp"
                     android:gravity="center"
                     android:orientation="horizontal">
 
@@ -158,37 +131,37 @@
 
                         <Button
                             android:id="@+id/btnVolUp"
-                            android:layout_width="72dp"
-                            android:layout_height="46dp"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
                             android:backgroundTint="#2B3142"
                             android:text="VOL +"
                             android:textColor="#FFFFFF"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <Button
                             android:id="@+id/btnVolDown"
-                            android:layout_width="72dp"
-                            android:layout_height="46dp"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
                             android:layout_marginTop="4dp"
                             android:backgroundTint="#2B3142"
                             android:text="VOL -"
                             android:textColor="#FFFFFF"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginHorizontal="6dp"
+                        android:layout_marginHorizontal="8dp"
                         android:gravity="center"
                         android:orientation="vertical">
 
                         <Button
                             android:id="@+id/btnMute"
-                            android:layout_width="65dp"
-                            android:layout_height="46dp"
+                            android:layout_width="66dp"
+                            android:layout_height="44dp"
                             android:backgroundTint="#252A38"
                             android:text="MUTE"
                             android:textColor="#F59E0B"
@@ -196,8 +169,8 @@
 
                         <Button
                             android:id="@+id/btnChList"
-                            android:layout_width="65dp"
-                            android:layout_height="46dp"
+                            android:layout_width="66dp"
+                            android:layout_height="44dp"
                             android:layout_marginTop="4dp"
                             android:backgroundTint="#252A38"
                             android:text="CH LIST"
@@ -214,32 +187,32 @@
 
                         <Button
                             android:id="@+id/btnChUp"
-                            android:layout_width="72dp"
-                            android:layout_height="46dp"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
                             android:backgroundTint="#2B3142"
                             android:text="CH ▲"
                             android:textColor="#FFFFFF"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <Button
                             android:id="@+id/btnChDown"
-                            android:layout_width="72dp"
-                            android:layout_height="46dp"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
                             android:layout_marginTop="4dp"
                             android:backgroundTint="#2B3142"
                             android:text="CH ▼"
                             android:textColor="#FFFFFF"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Row 4: Settings, Home, Guide -->
+                <!-- Row 3: Settings & Home -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="10dp"
                     android:gravity="center"
                     android:orientation="horizontal">
 
@@ -247,87 +220,42 @@
                         android:id="@+id/btnSettings"
                         android:layout_width="0dp"
                         android:layout_height="44dp"
-                        android:layout_margin="2dp"
+                        android:layout_marginEnd="4dp"
                         android:layout_weight="1"
                         android:backgroundTint="#252A38"
                         android:text="SETTINGS"
                         android:textColor="#D1D5DB"
-                        android:textSize="9sp" />
+                        android:textSize="10sp" />
 
                     <Button
                         android:id="@+id/btnHome"
                         android:layout_width="0dp"
-                        android:layout_height="46dp"
-                        android:layout_margin="2dp"
+                        android:layout_height="44dp"
+                        android:layout_marginStart="4dp"
                         android:layout_weight="1.2"
                         android:backgroundTint="#2563EB"
                         android:text="HOME"
                         android:textColor="#FFFFFF"
-                        android:textSize="12sp"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/btnGuide"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_margin="2dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="#252A38"
-                        android:text="GUIDE"
-                        android:textColor="#D1D5DB"
-                        android:textSize="9sp" />
                 </LinearLayout>
 
-                <!-- Row 5: E-Manual & Info Header -->
-                <LinearLayout
-                    android:layout_width="230dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnEManual"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="#202433"
-                        android:text="E-MANUAL"
-                        android:textColor="#9CA3AF"
-                        android:textSize="9sp" />
-
-                    <View
-                        android:layout_width="0dp"
-                        android:layout_height="1dp"
-                        android:layout_weight="0.8" />
-
-                    <Button
-                        android:id="@+id/btnInfo"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="#202433"
-                        android:text="INFO"
-                        android:textColor="#9CA3AF"
-                        android:textSize="9sp" />
-                </LinearLayout>
-
-                <!-- Row 6: D-Pad -->
+                <!-- Row 4: D-Pad -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="8dp"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <Button
                         android:id="@+id/btnUp"
                         android:layout_width="66dp"
-                        android:layout_height="44dp"
+                        android:layout_height="42dp"
                         android:backgroundTint="#2B3142"
                         android:text="▲"
                         android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
+                        android:textSize="15sp" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -338,46 +266,46 @@
                         <Button
                             android:id="@+id/btnLeft"
                             android:layout_width="44dp"
-                            android:layout_height="66dp"
+                            android:layout_height="64dp"
                             android:backgroundTint="#2B3142"
                             android:text="◀"
                             android:textColor="#FFFFFF"
-                            android:textSize="16sp" />
+                            android:textSize="15sp" />
 
                         <Button
                             android:id="@+id/btnEnter"
                             android:layout_width="66dp"
-                            android:layout_height="66dp"
+                            android:layout_height="64dp"
                             android:layout_marginHorizontal="2dp"
                             android:backgroundTint="#10B981"
                             android:text="OK"
                             android:textColor="#FFFFFF"
-                            android:textSize="15sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <Button
                             android:id="@+id/btnRight"
                             android:layout_width="44dp"
-                            android:layout_height="66dp"
+                            android:layout_height="64dp"
                             android:backgroundTint="#2B3142"
                             android:text="▶"
                             android:textColor="#FFFFFF"
-                            android:textSize="16sp" />
+                            android:textSize="15sp" />
                     </LinearLayout>
 
                     <Button
                         android:id="@+id/btnDown"
                         android:layout_width="66dp"
-                        android:layout_height="44dp"
+                        android:layout_height="42dp"
                         android:backgroundTint="#2B3142"
                         android:text="▼"
                         android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
+                        android:textSize="15sp" />
                 </LinearLayout>
 
-                <!-- Row 7: Return & Exit -->
+                <!-- Row 5: Return & Exit -->
                 <LinearLayout
-                    android:layout_width="230dp"
+                    android:layout_width="220dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:gravity="center"
@@ -394,9 +322,8 @@
                         android:textSize="9sp" />
 
                     <View
-                        android:layout_width="0dp"
-                        android:layout_height="1dp"
-                        android:layout_weight="0.8" />
+                        android:layout_width="16dp"
+                        android:layout_height="1dp" />
 
                     <Button
                         android:id="@+id/btnExit"
@@ -409,11 +336,11 @@
                         android:textSize="9sp" />
                 </LinearLayout>
 
-                <!-- Row 8: Extra Physical Buttons -->
+                <!-- Row 6: Picture Controls (Fixed Modes) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="10dp"
                     android:gravity="center"
                     android:orientation="horizontal">
 
@@ -433,11 +360,12 @@
                         android:layout_width="0dp"
                         android:layout_height="38dp"
                         android:layout_margin="2dp"
-                        android:layout_weight="1"
+                        android:layout_weight="1.2"
                         android:backgroundTint="#202433"
                         android:text="PICTURE"
-                        android:textColor="#9CA3AF"
-                        android:textSize="8sp" />
+                        android:textColor="#00E5FF"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
 
                     <Button
                         android:id="@+id/btnAdSubt"
@@ -459,10 +387,10 @@
                         android:backgroundTint="#202433"
                         android:text="■"
                         android:textColor="#FFFFFF"
-                        android:textSize="12sp" />
+                        android:textSize="11sp" />
                 </LinearLayout>
 
-                <!-- Row 9: Media Controls -->
+                <!-- Row 7: Media Controls -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -473,53 +401,53 @@
                     <Button
                         android:id="@+id/btnRewind"
                         android:layout_width="0dp"
-                        android:layout_height="40dp"
+                        android:layout_height="38dp"
                         android:layout_margin="2dp"
                         android:layout_weight="1"
                         android:backgroundTint="#202433"
                         android:text="◀◀"
                         android:textColor="#FFFFFF"
-                        android:textSize="11sp" />
+                        android:textSize="10sp" />
 
                     <Button
                         android:id="@+id/btnPlay"
                         android:layout_width="0dp"
-                        android:layout_height="40dp"
+                        android:layout_height="38dp"
                         android:layout_margin="2dp"
                         android:layout_weight="1"
                         android:backgroundTint="#202433"
                         android:text="▶"
                         android:textColor="#FFFFFF"
-                        android:textSize="12sp" />
+                        android:textSize="11sp" />
 
                     <Button
                         android:id="@+id/btnPause"
                         android:layout_width="0dp"
-                        android:layout_height="40dp"
+                        android:layout_height="38dp"
                         android:layout_margin="2dp"
                         android:layout_weight="1"
                         android:backgroundTint="#202433"
                         android:text="❚❚"
                         android:textColor="#FFFFFF"
-                        android:textSize="11sp" />
+                        android:textSize="10sp" />
 
                     <Button
                         android:id="@+id/btnFastForward"
                         android:layout_width="0dp"
-                        android:layout_height="40dp"
+                        android:layout_height="38dp"
                         android:layout_margin="2dp"
                         android:layout_weight="1"
                         android:backgroundTint="#202433"
                         android:text="▶▶"
                         android:textColor="#FFFFFF"
-                        android:textSize="11sp" />
+                        android:textSize="10sp" />
                 </LinearLayout>
 
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
-    <!-- 2. Touchpad Surface Container (Wi-Fi Powered) -->
+    <!-- 2. Pointer Surface Container (Hardware Pointer for Browser) -->
     <LinearLayout
         android:id="@+id/containerTouchpad"
         android:layout_width="match_parent"
@@ -527,30 +455,30 @@
         android:layout_above="@id/bottomNavBar"
         android:layout_below="@id/headerLayout"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:padding="16dp"
         android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="WI-FI TRACKPAD SURFACE"
+            android:text="TIZEN POINTER SURFACE (BROWSER)"
             android:textColor="#00E5FF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <View
             android:id="@+id/mouseSurface"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:layout_weight="1"
             android:background="#161824" />
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="12dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
             <Button
@@ -559,9 +487,10 @@
                 android:layout_height="match_parent"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
-                android:backgroundTint="#202433"
+                android:backgroundTint="#10B981"
                 android:text="LEFT CLICK"
-                android:textColor="#FFFFFF" />
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnRightClick"
@@ -570,12 +499,12 @@
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:backgroundTint="#202433"
-                android:text="RIGHT CLICK / BACK"
+                android:text="RETURN"
                 android:textColor="#FFFFFF" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 3. Air Mouse Container (Wi-Fi Powered Gyro) -->
+    <!-- 3. Air Mouse Container (Continuous Pointer Stream) -->
     <LinearLayout
         android:id="@+id/containerAirMouse"
         android:layout_width="match_parent"
@@ -584,42 +513,42 @@
         android:layout_below="@id/headerLayout"
         android:gravity="center"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="20dp"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/tvAirMouseStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Hold button and point phone at TV (Wi-Fi Air Mouse)"
+            android:text="Hold button &amp; point phone to steer cursor"
             android:textColor="#00E5FF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnAirTrigger"
-            android:layout_width="160dp"
-            android:layout_height="160dp"
-            android:layout_marginTop="40dp"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:layout_marginTop="30dp"
             android:backgroundTint="#2563EB"
-            android:text="HOLD TO&#10;AIM &amp; MOVE"
+            android:text="HOLD TO&#10;MOVE POINTER"
             android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnAirClick"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="40dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="30dp"
             android:backgroundTint="#10B981"
-            android:text="SELECT / OK"
+            android:text="LEFT CLICK"
             android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 4. Voice Input Container (Bangla & English Dual Buttons) -->
+    <!-- 4. Voice Input Container (Bangla & English Separate Buttons) -->
     <LinearLayout
         android:id="@+id/containerAiVoice"
         android:layout_width="match_parent"
@@ -628,81 +557,80 @@
         android:layout_below="@id/headerLayout"
         android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="20dp"
         android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Voice Input"
+            android:text="Voice Search &amp; YouTube Direct"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvVoiceFeedback"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Select language and tap to speak"
+            android:layout_marginTop="6dp"
+            android:text="Select language to speak"
             android:textColor="#8892B0"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
-        <!-- Dual Mic Buttons: Bangla & English -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="20dp"
             android:gravity="center"
             android:orientation="horizontal">
 
             <Button
                 android:id="@+id/btnMicBangla"
                 android:layout_width="0dp"
-                android:layout_height="110dp"
-                android:layout_marginEnd="8dp"
+                android:layout_height="90dp"
+                android:layout_marginEnd="6dp"
                 android:layout_weight="1"
                 android:backgroundTint="#0284C7"
                 android:text="🎙&#10;SPEAK&#10;BANGLA"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnMicEnglish"
                 android:layout_width="0dp"
-                android:layout_height="110dp"
-                android:layout_marginStart="8dp"
+                android:layout_height="90dp"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:backgroundTint="#2563EB"
                 android:text="🎙&#10;SPEAK&#10;ENGLISH"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
         <EditText
             android:id="@+id/etTranscribedText"
             android:layout_width="match_parent"
-            android:layout_height="90dp"
-            android:layout_marginTop="24dp"
+            android:layout_height="80dp"
+            android:layout_marginTop="16dp"
             android:background="#161824"
             android:gravity="top|start"
-            android:hint="Spoken text appears here..."
-            android:padding="14dp"
+            android:hint="Spoken voice will appear here..."
+            android:padding="12dp"
             android:textColor="#FFFFFF"
             android:textColorHint="#555E75"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
 
         <Button
             android:id="@+id/btnSendVoiceToTv"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#10B981"
-            android:text="SEND TEXT TO TV SEARCH"
+            android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:backgroundTint="#CC0000"
+            android:text="PLAY ON YOUTUBE APP"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -710,7 +638,7 @@
     <LinearLayout
         android:id="@+id/bottomNavBar"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="48dp"
         android:layout_alignParentBottom="true"
         android:background="#131620"
         android:elevation="8dp"
@@ -724,7 +652,7 @@
             android:backgroundTint="#1D2230"
             android:text="Buttons"
             android:textColor="#00E5FF"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <Button
@@ -735,7 +663,7 @@
             android:backgroundTint="#131620"
             android:text="Touchpad"
             android:textColor="#8892B0"
-            android:textSize="11sp" />
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/navAirMouse"
@@ -745,7 +673,7 @@
             android:backgroundTint="#131620"
             android:text="Air Mouse"
             android:textColor="#8892B0"
-            android:textSize="11sp" />
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/navAiVoice"
@@ -755,7 +683,7 @@
             android:backgroundTint="#131620"
             android:text="AI Voice"
             android:textColor="#8892B0"
-            android:textSize="11sp" />
+            android:textSize="10sp" />
     </LinearLayout>
 
 </RelativeLayout>
