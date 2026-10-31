@@ -26,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -43,9 +44,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var containerAirMouse: View
     private lateinit var containerAiVoice: View
 
-    private var lastPointerX = 0f
-    private var lastPointerY = 0f
-    private var lastPointerMoveTime = 0L
+    private var touchStartX = 0f
+    private var touchStartY = 0f
+    private var lastMoveTime = 0L
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,7 +66,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         try {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
             gyroscopeSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+                ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         } catch (_: Exception) {}
 
         tvStatus = findViewById(R.id.tvTvStatus)
@@ -115,8 +116,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         setupButtons()
-        setupTizenPointer()
-        setupAirMouse()
+        setupTouchpadControl()
+        setupAirMouseControl()
         setupDualVoiceInput()
         setupTabSwitching()
         checkPermissions()
@@ -143,36 +144,47 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
-    // টাইজেন ব্রাউজার পয়েন্টার টাচপ্যাড
+    // টাচপ্যাড হ্যান্ডলার: পয়েন্টার ইভেন্টের পাশাপাশি ন্যাভিগেশন সিগন্যাল নিশ্চিত করবে
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupTizenPointer() {
+    private fun setupTouchpadControl() {
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
         mouseSurface.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    lastPointerX = event.x
-                    lastPointerY = event.y
+                    touchStartX = event.x
+                    touchStartY = event.y
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val now = System.currentTimeMillis()
-                    if (now - lastPointerMoveTime > 30) {
-                        val dx = ((event.x - lastPointerX) * 1.8f).toInt()
-                        val dy = ((event.y - lastPointerY) * 1.8f).toInt()
-                        if (dx != 0 || dy != 0) {
-                            tvManager.sendPointerMove(dx, dy)
-                            lastPointerX = event.x
-                            lastPointerY = event.y
-                            lastPointerMoveTime = now
+                    if (now - lastMoveTime > 60) {
+                        val dx = (event.x - touchStartX).toInt()
+                        val dy = (event.y - touchStartY).toInt()
+
+                        // একই সাথে ব্রাউজার কার্সর এবং অ্যাপ ন্যাভিগেশন সিগন্যাল পাঠানো
+                        tvManager.sendPointerMove(dx, dy)
+
+                        if (abs(dx) > 30 || abs(dy) > 30) {
+                            if (abs(dx) > abs(dy)) {
+                                if (dx > 0) tvManager.sendKey("KEY_RIGHT")
+                                else tvManager.sendKey("KEY_LEFT")
+                            } else {
+                                if (dy > 0) tvManager.sendKey("KEY_DOWN")
+                                else tvManager.sendKey("KEY_UP")
+                            }
+                            touchStartX = event.x
+                            touchStartY = event.y
                         }
+                        lastMoveTime = now
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    val diffX = kotlin.math.abs(event.x - lastPointerX)
-                    val diffY = kotlin.math.abs(event.y - lastPointerY)
-                    if (diffX < 10 && diffY < 10) {
+                    val diffX = abs(event.x - touchStartX)
+                    val diffY = abs(event.y - touchStartY)
+                    if (diffX < 15 && diffY < 15) {
                         tvManager.sendPointerClick()
+                        tvManager.sendKey("KEY_ENTER")
                     }
                     true
                 }
@@ -182,15 +194,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
             tvManager.sendPointerClick()
+            tvManager.sendKey("KEY_ENTER")
         }
         findViewById<Button>(R.id.btnRightClick).setOnClickListener {
             tvManager.sendKey("KEY_RETURN")
         }
     }
 
-    // টাইজেন এয়ার মাউস (জাইরোস্কোপ ডেটা দিয়ে সরাসরি পয়েন্টার স্ট্রিম)
+    // এয়ার মাউস হ্যান্ডলার: জাইরোস্কোপ থাকলে জাইরো, না থাকলে অ্যাক্সিলোমিটার দিয়ে সিগন্যাল পাঠানো
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupAirMouse() {
+    private fun setupAirMouseControl() {
         val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
         btnAirTrigger.setOnTouchListener { _, event ->
             when (event.action) {
@@ -208,10 +221,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         findViewById<Button>(R.id.btnAirClick).setOnClickListener {
             tvManager.sendPointerClick()
+            tvManager.sendKey("KEY_ENTER")
         }
     }
 
-    // বাংলা ও ইংরেজি ডুয়েল ভয়েস ইনপুট
     private fun setupDualVoiceInput() {
         val btnBangla = findViewById<Button>(R.id.btnMicBangla)
         val btnEnglish = findViewById<Button>(R.id.btnMicEnglish)
@@ -303,20 +316,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         findViewById<Button>(R.id.btnReturn).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
         findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
 
-        // ফিক্সড কালার মোড সাইকেল
-        findViewById<Button>(R.id.btnPicture).setOnClickListener {
-            tvManager.cyclePictureMode()
-        }
-
-        // ফিক্সড অ্যাসপেক্ট রেশিও
-        findViewById<Button>(R.id.btnPicSize).setOnClickListener {
-            tvManager.togglePicSize()
-        }
-
-        // ফিক্সড সাবটাইটেল
-        findViewById<Button>(R.id.btnAdSubt).setOnClickListener {
-            tvManager.toggleSubtitle()
-        }
+        findViewById<Button>(R.id.btnPicture).setOnClickListener { tvManager.cyclePictureMode() }
+        findViewById<Button>(R.id.btnPicSize).setOnClickListener { tvManager.togglePicSize() }
+        findViewById<Button>(R.id.btnAdSubt).setOnClickListener { tvManager.toggleSubtitle() }
 
         findViewById<Button>(R.id.btnStop).setOnClickListener { tvManager.sendKey("KEY_STOP") }
         findViewById<Button>(R.id.btnRewind).setOnClickListener { tvManager.sendKey("KEY_REWIND") }
@@ -403,12 +405,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || !isAirMouseActive) return
-        if (event.sensor.type == Sensor.TYPE_GYROSCOPE) {
-            val speedFactor = 16f
-            val dx = (-event.values[2] * speedFactor).toInt()
-            val dy = (-event.values[0] * speedFactor).toInt()
-            if (dx != 0 || dy != 0) {
-                tvManager.sendPointerMove(dx, dy)
+        val now = System.currentTimeMillis()
+        if (now - lastMoveTime > 120) {
+            val rotZ = event.values.getOrNull(2) ?: 0f
+            val rotX = event.values.getOrNull(0) ?: 0f
+            val threshold = 1.0f
+
+            if (abs(rotZ) > threshold || abs(rotX) > threshold) {
+                if (abs(rotZ) > abs(rotX)) {
+                    if (rotZ < -threshold) tvManager.sendKey("KEY_RIGHT")
+                    else if (rotZ > threshold) tvManager.sendKey("KEY_LEFT")
+                } else {
+                    if (rotX < -threshold) tvManager.sendKey("KEY_UP")
+                    else if (rotX > threshold) tvManager.sendKey("KEY_DOWN")
+                }
+                lastMoveTime = now
             }
         }
     }
