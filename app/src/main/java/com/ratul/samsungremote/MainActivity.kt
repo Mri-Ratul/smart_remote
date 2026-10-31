@@ -22,8 +22,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlin.math.abs
@@ -44,9 +44,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var containerAirMouse: View
     private lateinit var containerAiVoice: View
 
-    private var touchStartX = 0f
-    private var touchStartY = 0f
-    private var lastMoveTime = 0L
+    // মাউস ট্র্যাকিং ভ্যারিয়েবল
+    private var lastPointerX = 0f
+    private var lastPointerY = 0f
+    private var lastPointerTime = 0L
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,7 +67,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         try {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
             gyroscopeSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+                ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         } catch (_: Exception) {}
 
         tvStatus = findViewById(R.id.tvTvStatus)
@@ -116,8 +117,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         setupButtons()
-        setupTouchpadControl()
-        setupAirMouseControl()
+        setupPureMouseTouchpad()
+        setupPureAirMouse()
         setupDualVoiceInput()
         setupTabSwitching()
         checkPermissions()
@@ -144,47 +145,38 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
-    // টাচপ্যাড হ্যান্ডলার: পয়েন্টার ইভেন্টের পাশাপাশি ন্যাভিগেশন সিগন্যাল নিশ্চিত করবে
+    // পিওর মাউস টাচপ্যাড (কোনো সোয়াইপ/কী কোড নেই, শুধুই dx/dy পয়েন্টার মুভমেন্ট)
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupTouchpadControl() {
+    private fun setupPureMouseTouchpad() {
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
         mouseSurface.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    touchStartX = event.x
-                    touchStartY = event.y
+                    lastPointerX = event.x
+                    lastPointerY = event.y
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val now = System.currentTimeMillis()
-                    if (now - lastMoveTime > 60) {
-                        val dx = (event.x - touchStartX).toInt()
-                        val dy = (event.y - touchStartY).toInt()
+                    if (now - lastPointerTime > 15) { // স্মুথ মাউস ফ্রেমরেট
+                        val dx = ((event.x - lastPointerX) * 2.2f).toInt()
+                        val dy = ((event.y - lastPointerY) * 2.2f).toInt()
 
-                        // একই সাথে ব্রাউজার কার্সর এবং অ্যাপ ন্যাভিগেশন সিগন্যাল পাঠানো
-                        tvManager.sendPointerMove(dx, dy)
-
-                        if (abs(dx) > 30 || abs(dy) > 30) {
-                            if (abs(dx) > abs(dy)) {
-                                if (dx > 0) tvManager.sendKey("KEY_RIGHT")
-                                else tvManager.sendKey("KEY_LEFT")
-                            } else {
-                                if (dy > 0) tvManager.sendKey("KEY_DOWN")
-                                else tvManager.sendKey("KEY_UP")
-                            }
-                            touchStartX = event.x
-                            touchStartY = event.y
+                        if (dx != 0 || dy != 0) {
+                            tvManager.sendPointerMove(dx, dy)
+                            lastPointerX = event.x
+                            lastPointerY = event.y
+                            lastPointerTime = now
                         }
-                        lastMoveTime = now
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    val diffX = abs(event.x - touchStartX)
-                    val diffY = abs(event.y - touchStartY)
-                    if (diffX < 15 && diffY < 15) {
+                    val diffX = abs(event.x - lastPointerX)
+                    val diffY = abs(event.y - lastPointerY)
+                    // সারফেসে হালকা ট্যাপ করলে মাউস ক্লিক
+                    if (diffX < 8 && diffY < 8) {
                         tvManager.sendPointerClick()
-                        tvManager.sendKey("KEY_ENTER")
                     }
                     true
                 }
@@ -194,16 +186,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
             tvManager.sendPointerClick()
-            tvManager.sendKey("KEY_ENTER")
         }
         findViewById<Button>(R.id.btnRightClick).setOnClickListener {
             tvManager.sendKey("KEY_RETURN")
         }
     }
 
-    // এয়ার মাউস হ্যান্ডলার: জাইরোস্কোপ থাকলে জাইরো, না থাকলে অ্যাক্সিলোমিটার দিয়ে সিগন্যাল পাঠানো
+    // পিওর এয়ার মাউস (জাইরোস্কোপ ডেটা দিয়ে সরাসরি পয়েন্টার কার্সর ড্রাইভ)
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupAirMouseControl() {
+    private fun setupPureAirMouse() {
         val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
         btnAirTrigger.setOnTouchListener { _, event ->
             when (event.action) {
@@ -221,7 +212,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         findViewById<Button>(R.id.btnAirClick).setOnClickListener {
             tvManager.sendPointerClick()
-            tvManager.sendKey("KEY_ENTER")
+        }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event == null || !isAirMouseActive) return
+        val now = System.currentTimeMillis()
+        if (now - lastPointerTime > 20) {
+            val rotZ = event.values.getOrNull(2) ?: 0f
+            val rotX = event.values.getOrNull(0) ?: 0f
+
+            // জাইরোস্কোপিক অ্যাঙ্গুলার ভেলোসিটি সরাসরি মাউস পয়েন্টারে কনভার্ট
+            val sensitivity = 22f
+            val dx = (-rotZ * sensitivity).toInt()
+            val dy = (-rotX * sensitivity).toInt()
+
+            if (dx != 0 || dy != 0) {
+                tvManager.sendPointerMove(dx, dy)
+                lastPointerTime = now
+            }
         }
     }
 
@@ -401,27 +410,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onPause() {
         super.onPause()
         sensorManager?.unregisterListener(this)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event == null || !isAirMouseActive) return
-        val now = System.currentTimeMillis()
-        if (now - lastMoveTime > 120) {
-            val rotZ = event.values.getOrNull(2) ?: 0f
-            val rotX = event.values.getOrNull(0) ?: 0f
-            val threshold = 1.0f
-
-            if (abs(rotZ) > threshold || abs(rotX) > threshold) {
-                if (abs(rotZ) > abs(rotX)) {
-                    if (rotZ < -threshold) tvManager.sendKey("KEY_RIGHT")
-                    else if (rotZ > threshold) tvManager.sendKey("KEY_LEFT")
-                } else {
-                    if (rotX < -threshold) tvManager.sendKey("KEY_UP")
-                    else if (rotX > threshold) tvManager.sendKey("KEY_DOWN")
-                }
-                lastMoveTime = now
-            }
-        }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
