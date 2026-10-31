@@ -6,12 +6,15 @@ import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.*
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.URLEncoder
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
@@ -50,7 +53,7 @@ class SamsungTvManager(private val context: Context) {
 
     fun autoDiscoverTv() {
         CoroutineScope(Dispatchers.IO).launch {
-            withContext(Dispatchers.Main) { onStatusChanged?.invoke("Scanning local network...") }
+            withContext(Dispatchers.Main) { onStatusChanged?.invoke("Scanning network...") }
 
             var foundIp: String? = null
 
@@ -212,40 +215,64 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // Wi-Fi ভিত্তিক মাউস মুভমেন্ট (কোনো ব্লুটুথ ছাড়াই)
-    fun sendWifiMouseMove(dx: Int, dy: Int) {
+    // টাইজেন ব্রাউজার পয়েন্টার মুভমেন্ট (অফিশিয়াল SendPointerEvent প্রোটোকল)
+    fun sendPointerMove(dx: Int, dy: Int) {
         if (!isConnected || webSocket == null) return
 
         val payload = JSONObject().apply {
-            put("method", "ms.remote.touchpad")
+            put("method", "ms.remote.control")
             put("params", JSONObject().apply {
-                put("event", "move")
-                put("x", dx)
-                put("y", dy)
+                put("Cmd", "Move")
+                put("Position", JSONObject().apply {
+                    put("x", dx)
+                    put("y", dy)
+                })
+                put("TypeOfRemote", "SendPointerEvent")
             })
         }
         webSocket?.send(payload.toString())
     }
 
-    // Wi-Fi ভিত্তিক মাউস ক্লিক
-    fun sendWifiMouseClick() {
+    // টাইজেন ব্রাউজার মাউস ক্লিক
+    fun sendPointerClick() {
         if (!isConnected || webSocket == null) return
 
         val payload = JSONObject().apply {
-            put("method", "ms.remote.touchpad")
+            put("method", "ms.remote.control")
             put("params", JSONObject().apply {
-                put("event", "click")
+                put("Cmd", "LeftClick")
+                put("TypeOfRemote", "SendPointerEvent")
             })
         }
         webSocket?.send(payload.toString())
     }
 
+    // পিকচার মোড সাইকেল
+    fun cyclePictureMode() {
+        sendKey("KEY_PICTURE_MODE")
+        sendKey("KEY_PMODE")
+    }
+
+    // পিকচার সাইজ
+    fun togglePicSize() {
+        sendKey("KEY_ASPECT")
+        sendKey("KEY_ZOOM")
+    }
+
+    // সাবটাইটেল
+    fun toggleSubtitle() {
+        sendKey("KEY_SUB_TITLE")
+        sendKey("KEY_CAPTION")
+    }
+
+    // সাধারণ টেক্সট পাঠানো
     fun sendText(text: String) {
         if (!isConnected || webSocket == null) {
             val savedIp = getSavedIp()
             if (savedIp.isNotEmpty()) connect(savedIp)
             return
         }
+
         val textBase64 = Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP)
         val payload = JSONObject().apply {
             put("method", "ms.remote.control")
@@ -259,6 +286,7 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
+    // ইউটিউব সরাসরি ওপেন করা
     fun launchYouTube() {
         val tvIp = getSavedIp()
         if (tvIp.isEmpty()) return
@@ -266,11 +294,42 @@ class SamsungTvManager(private val context: Context) {
             try {
                 val request = Request.Builder()
                     .url("http://$tvIp:8001/api/v2/applications/111299001912")
-                    .post(RequestBody.create(null, ByteArray(0)))
+                    .post(ByteArray(0).toRequestBody(null))
                     .build()
                 client.newCall(request).execute()
             } catch (_: Exception) {
                 sendKey("KEY_YOUTUBE")
+            }
+        }
+    }
+
+    // ইউটিউব অ্যাপে ভয়েস সার্চ ডায়রেক্ট এক্সিকিউট করা
+    fun launchYouTubeWithSearch(query: String) {
+        val tvIp = getSavedIp()
+        if (tvIp.isEmpty()) return
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val encoded = URLEncoder.encode(query, "UTF-8")
+                val postData = "v=&search_query=$encoded"
+                val mediaType = "application/json".toMediaTypeOrNull()
+                val body = postData.toRequestBody(mediaType)
+
+                val request = Request.Builder()
+                    .url("http://$tvIp:8001/api/v2/applications/111299001912")
+                    .post(body)
+                    .build()
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful) {
+                    launchYouTube()
+                    delay(1200)
+                    sendText(query)
+                    sendKey("KEY_ENTER")
+                }
+            } catch (_: Exception) {
+                launchYouTube()
+                delay(1200)
+                sendText(query)
+                sendKey("KEY_ENTER")
             }
         }
     }
