@@ -43,8 +43,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var containerAirMouse: View
     private lateinit var containerAiVoice: View
 
-    private var lastTouchX = 0f
-    private var lastTouchY = 0f
+    private var lastPointerX = 0f
+    private var lastPointerY = 0f
+    private var lastPointerMoveTime = 0L
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +65,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         try {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
             gyroscopeSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+                ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         } catch (_: Exception) {}
 
         tvStatus = findViewById(R.id.tvTvStatus)
@@ -113,7 +115,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         setupButtons()
-        setupTouchpad()
+        setupTizenPointer()
         setupAirMouse()
         setupDualVoiceInput()
         setupTabSwitching()
@@ -122,7 +124,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun showManualIpDialog() {
         val input = EditText(this).apply {
-            hint = "e.g. 192.168.0.105"
+            hint = "e.g. 192.168.0.101"
             setText(tvManager.getSavedIp())
             setPadding(50, 40, 50, 40)
         }
@@ -141,7 +143,75 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
-    // বাংলা ও ইংরেজি পৃথক ভয়েস বাটন
+    // টাইজেন ব্রাউজার পয়েন্টার টাচপ্যাড
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupTizenPointer() {
+        val mouseSurface = findViewById<View>(R.id.mouseSurface)
+        mouseSurface.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastPointerX = event.x
+                    lastPointerY = event.y
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val now = System.currentTimeMillis()
+                    if (now - lastPointerMoveTime > 30) {
+                        val dx = ((event.x - lastPointerX) * 1.8f).toInt()
+                        val dy = ((event.y - lastPointerY) * 1.8f).toInt()
+                        if (dx != 0 || dy != 0) {
+                            tvManager.sendPointerMove(dx, dy)
+                            lastPointerX = event.x
+                            lastPointerY = event.y
+                            lastPointerMoveTime = now
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val diffX = kotlin.math.abs(event.x - lastPointerX)
+                    val diffY = kotlin.math.abs(event.y - lastPointerY)
+                    if (diffX < 10 && diffY < 10) {
+                        tvManager.sendPointerClick()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+
+        findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
+            tvManager.sendPointerClick()
+        }
+        findViewById<Button>(R.id.btnRightClick).setOnClickListener {
+            tvManager.sendKey("KEY_RETURN")
+        }
+    }
+
+    // টাইজেন এয়ার মাউস (জাইরোস্কোপ ডেটা দিয়ে সরাসরি পয়েন্টার স্ট্রিম)
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupAirMouse() {
+        val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
+        btnAirTrigger.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    isAirMouseActive = true
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    isAirMouseActive = false
+                    true
+                }
+                else -> false
+            }
+        }
+
+        findViewById<Button>(R.id.btnAirClick).setOnClickListener {
+            tvManager.sendPointerClick()
+        }
+    }
+
+    // বাংলা ও ইংরেজি ডুয়েল ভয়েস ইনপুট
     private fun setupDualVoiceInput() {
         val btnBangla = findViewById<Button>(R.id.btnMicBangla)
         val btnEnglish = findViewById<Button>(R.id.btnMicEnglish)
@@ -173,12 +243,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     tvFeedback.text = "Voice recognized!"
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     if (!matches.isNullOrEmpty()) {
-                        etText.setText(matches[0])
+                        val spoken = matches[0]
+                        etText.setText(spoken)
+                        tvManager.launchYouTubeWithSearch(spoken)
+                        Toast.makeText(this@MainActivity, "Playing on YouTube: $spoken", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onError(error: Int) {
-                    tvFeedback.text = "Error recognizing voice. Tap to try again."
+                    tvFeedback.text = "Error capturing voice. Tap to try again."
                 }
 
                 override fun onBeginningOfSpeech() {}
@@ -200,73 +273,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnSend.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
-                tvManager.sendText(text)
-                Toast.makeText(this, "Sent: \"$text\"", Toast.LENGTH_SHORT).show()
+                tvManager.launchYouTubeWithSearch(text)
+                Toast.makeText(this, "Searching YouTube: $text", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    // Wi-Fi টাচপ্যাড হ্যান্ডলার
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupTouchpad() {
-        val mouseSurface = findViewById<View>(R.id.mouseSurface)
-        mouseSurface.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    lastTouchX = event.x
-                    lastTouchY = event.y
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = ((event.x - lastTouchX) * 2f).toInt()
-                    val dy = ((event.y - lastTouchY) * 2f).toInt()
-                    if (dx != 0 || dy != 0) {
-                        tvManager.sendWifiMouseMove(dx, dy)
-                        lastTouchX = event.x
-                        lastTouchY = event.y
-                    }
-                }
-            }
-            true
-        }
-
-        findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
-            tvManager.sendWifiMouseClick()
-        }
-        findViewById<Button>(R.id.btnRightClick).setOnClickListener {
-            tvManager.sendKey("KEY_RETURN")
-        }
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupAirMouse() {
-        val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
-        btnAirTrigger.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    isAirMouseActive = true
-                    true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    isAirMouseActive = false
-                    true
-                }
-                else -> false
-            }
-        }
-
-        findViewById<Button>(R.id.btnAirClick).setOnClickListener {
-            tvManager.sendWifiMouseClick()
-        }
-    }
-
-    // ফিজিক্যাল রিমোটের সব বাটনের সঠিক Tizen কি-কোড
     private fun setupButtons() {
         findViewById<Button>(R.id.btnPower).setOnClickListener { tvManager.sendKey("KEY_POWER") }
         findViewById<Button>(R.id.btnSource).setOnClickListener { tvManager.sendKey("KEY_SOURCE") }
-
-        findViewById<Button>(R.id.btnTtxMix).setOnClickListener { tvManager.sendKey("KEY_TTX_MIX") }
         findViewById<Button>(R.id.btnYouTube).setOnClickListener { tvManager.launchYouTube() }
-        findViewById<Button>(R.id.btnPreCh).setOnClickListener { tvManager.sendKey("KEY_PRECH") }
 
         findViewById<Button>(R.id.btnVolUp).setOnClickListener { tvManager.sendKey("KEY_VOLUP") }
         findViewById<Button>(R.id.btnVolDown).setOnClickListener { tvManager.sendKey("KEY_VOLDOWN") }
@@ -278,24 +294,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         findViewById<Button>(R.id.btnSettings).setOnClickListener { tvManager.sendKey("KEY_MENU") }
         findViewById<Button>(R.id.btnHome).setOnClickListener { tvManager.sendKey("KEY_HOME") }
 
-        // ফিক্সড: GUIDE বাটন
-        findViewById<Button>(R.id.btnGuide).setOnClickListener {
-            tvManager.sendKey("KEY_GUIDE")
-            tvManager.sendKey("KEY_EPG")
-        }
-
-        // ফিক্সড: E-MANUAL বাটন
-        findViewById<Button>(R.id.btnEManual).setOnClickListener {
-            tvManager.sendKey("KEY_EMARKET")
-            tvManager.sendKey("KEY_HELP")
-            tvManager.sendKey("KEY_CONTENTS")
-        }
-
-        // ফিক্সড: INFO বাটন
-        findViewById<Button>(R.id.btnInfo).setOnClickListener {
-            tvManager.sendKey("KEY_INFO")
-        }
-
         findViewById<Button>(R.id.btnUp).setOnClickListener { tvManager.sendKey("KEY_UP") }
         findViewById<Button>(R.id.btnDown).setOnClickListener { tvManager.sendKey("KEY_DOWN") }
         findViewById<Button>(R.id.btnLeft).setOnClickListener { tvManager.sendKey("KEY_LEFT") }
@@ -305,22 +303,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         findViewById<Button>(R.id.btnReturn).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
         findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
 
-        // ফিক্সড: PIC SIZE বাটন
-        findViewById<Button>(R.id.btnPicSize).setOnClickListener {
-            tvManager.sendKey("KEY_ASPECT")
-            tvManager.sendKey("KEY_PMODE")
-        }
-
-        // ফিক্সড: PICTURE বাটন
+        // ফিক্সড কালার মোড সাইকেল
         findViewById<Button>(R.id.btnPicture).setOnClickListener {
-            tvManager.sendKey("KEY_PICTURE_SIZE")
-            tvManager.sendKey("KEY_PICTURE_MODE")
+            tvManager.cyclePictureMode()
         }
 
-        // ফিক্সড: AD/SUBT বাটন
+        // ফিক্সড অ্যাসপেক্ট রেশিও
+        findViewById<Button>(R.id.btnPicSize).setOnClickListener {
+            tvManager.togglePicSize()
+        }
+
+        // ফিক্সড সাবটাইটেল
         findViewById<Button>(R.id.btnAdSubt).setOnClickListener {
-            tvManager.sendKey("KEY_SUB_TITLE")
-            tvManager.sendKey("KEY_CAPTION")
+            tvManager.toggleSubtitle()
         }
 
         findViewById<Button>(R.id.btnStop).setOnClickListener { tvManager.sendKey("KEY_STOP") }
@@ -409,11 +404,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || !isAirMouseActive) return
         if (event.sensor.type == Sensor.TYPE_GYROSCOPE) {
-            val speedFactor = 15f
+            val speedFactor = 16f
             val dx = (-event.values[2] * speedFactor).toInt()
             val dy = (-event.values[0] * speedFactor).toInt()
             if (dx != 0 || dy != 0) {
-                tvManager.sendWifiMouseMove(dx, dy)
+                tvManager.sendPointerMove(dx, dy)
             }
         }
     }
