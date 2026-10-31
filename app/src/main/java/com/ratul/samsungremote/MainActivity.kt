@@ -10,7 +10,6 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.net.wifi.WifiManager
-import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -31,7 +30,6 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var tvManager: SamsungTvManager
-    private var btMouseManager: BluetoothMouseManager? = null
     private var speechRecognizer: SpeechRecognizer? = null
 
     private var sensorManager: SensorManager? = null
@@ -117,7 +115,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupButtons()
         setupTouchpad()
         setupAirMouse()
-        setupFreeVoiceInput()
+        setupDualVoiceInput()
         setupTabSwitching()
         checkPermissions()
     }
@@ -131,7 +129,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         AlertDialog.Builder(this)
             .setTitle("Enter TV IP Address")
-            .setMessage("Connect to any specific TV on your Wi-Fi:")
+            .setMessage("Do not add ports or http (just the IP):")
             .setView(input)
             .setPositiveButton("Connect") { _, _ ->
                 val ip = input.text.toString().trim()
@@ -143,69 +141,72 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
-    // ফ্রি গুগল ভয়েস ইনপুট (কোনো API Key লাগবে না)
-    private fun setupFreeVoiceInput() {
-        val btnMicTrigger = findViewById<Button>(R.id.btnMicTrigger)
-        val tvVoiceFeedback = findViewById<TextView>(R.id.tvVoiceFeedback)
-        val etTranscribedText = findViewById<EditText>(R.id.etTranscribedText)
-        val btnSendVoiceToTv = findViewById<Button>(R.id.btnSendVoiceToTv)
+    // বাংলা ও ইংরেজি পৃথক ভয়েস বাটন
+    private fun setupDualVoiceInput() {
+        val btnBangla = findViewById<Button>(R.id.btnMicBangla)
+        val btnEnglish = findViewById<Button>(R.id.btnMicEnglish)
+        val tvFeedback = findViewById<TextView>(R.id.tvVoiceFeedback)
+        val etText = findViewById<EditText>(R.id.etTranscribedText)
+        val btnSend = findViewById<Button>(R.id.btnSendVoiceToTv)
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        val speechIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "bn-BD")
-        }
 
-        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                tvVoiceFeedback.text = "Listening... Speak now"
-                btnMicTrigger.text = "🔴\nLISTENING"
-            }
-
-            override fun onResults(results: Bundle?) {
-                btnMicTrigger.text = "🎙\nTAP TO\nSPEAK"
-                tvVoiceFeedback.text = "Voice recognized!"
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) {
-                    val text = matches[0]
-                    etTranscribedText.setText(text)
-                }
-            }
-
-            override fun onError(error: Int) {
-                btnMicTrigger.text = "🎙\nTAP TO\nSPEAK"
-                tvVoiceFeedback.text = "Try again (Tap to speak)"
-            }
-
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {
-                tvVoiceFeedback.text = "Processing..."
-            }
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-
-        btnMicTrigger.setOnClickListener {
+        fun listenVoice(langCode: String) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 202)
-                return@setOnClickListener
+                return
             }
+
+            val speechIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, langCode)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, langCode)
+                putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, langCode)
+            }
+
+            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    tvFeedback.text = if (langCode == "bn-BD") "বাংলা শুনছি... বলুন" else "Listening in English... Speak"
+                }
+
+                override fun onResults(results: Bundle?) {
+                    tvFeedback.text = "Voice recognized!"
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    if (!matches.isNullOrEmpty()) {
+                        etText.setText(matches[0])
+                    }
+                }
+
+                override fun onError(error: Int) {
+                    tvFeedback.text = "Error recognizing voice. Tap to try again."
+                }
+
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {
+                    tvFeedback.text = "Processing..."
+                }
+                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+
             speechRecognizer?.startListening(speechIntent)
         }
 
-        btnSendVoiceToTv.setOnClickListener {
-            val textToSend = etTranscribedText.text.toString().trim()
-            if (textToSend.isNotEmpty()) {
-                tvManager.sendText(textToSend)
-                Toast.makeText(this, "Sent: \"$textToSend\"", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "No text to send!", Toast.LENGTH_SHORT).show()
+        btnBangla.setOnClickListener { listenVoice("bn-BD") }
+        btnEnglish.setOnClickListener { listenVoice("en-US") }
+
+        btnSend.setOnClickListener {
+            val text = etText.text.toString().trim()
+            if (text.isNotEmpty()) {
+                tvManager.sendText(text)
+                Toast.makeText(this, "Sent: \"$text\"", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    // Wi-Fi টাচপ্যাড হ্যান্ডলার
     @SuppressLint("ClickableViewAccessibility")
     private fun setupTouchpad() {
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
@@ -216,10 +217,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     lastTouchY = event.y
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val dx = ((event.x - lastTouchX) * 1.5f).toInt()
-                    val dy = ((event.y - lastTouchY) * 1.5f).toInt()
+                    val dx = ((event.x - lastTouchX) * 2f).toInt()
+                    val dy = ((event.y - lastTouchY) * 2f).toInt()
                     if (dx != 0 || dy != 0) {
-                        btMouseManager?.sendMouseMovement(dx, dy)
+                        tvManager.sendWifiMouseMove(dx, dy)
                         lastTouchX = event.x
                         lastTouchY = event.y
                     }
@@ -229,10 +230,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
-            btMouseManager?.sendMouseClick(isRightClick = false)
+            tvManager.sendWifiMouseClick()
         }
         findViewById<Button>(R.id.btnRightClick).setOnClickListener {
-            btMouseManager?.sendMouseClick(isRightClick = true)
+            tvManager.sendKey("KEY_RETURN")
         }
     }
 
@@ -254,10 +255,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         findViewById<Button>(R.id.btnAirClick).setOnClickListener {
-            btMouseManager?.sendMouseClick(isRightClick = false)
+            tvManager.sendWifiMouseClick()
         }
     }
 
+    // ফিজিক্যাল রিমোটের সব বাটনের সঠিক Tizen কি-কোড
     private fun setupButtons() {
         findViewById<Button>(R.id.btnPower).setOnClickListener { tvManager.sendKey("KEY_POWER") }
         findViewById<Button>(R.id.btnSource).setOnClickListener { tvManager.sendKey("KEY_SOURCE") }
@@ -275,10 +277,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         findViewById<Button>(R.id.btnSettings).setOnClickListener { tvManager.sendKey("KEY_MENU") }
         findViewById<Button>(R.id.btnHome).setOnClickListener { tvManager.sendKey("KEY_HOME") }
-        findViewById<Button>(R.id.btnGuide).setOnClickListener { tvManager.sendKey("KEY_GUIDE") }
 
-        findViewById<Button>(R.id.btnEManual).setOnClickListener { tvManager.sendKey("KEY_CONTENTS") }
-        findViewById<Button>(R.id.btnInfo).setOnClickListener { tvManager.sendKey("KEY_INFO") }
+        // ফিক্সড: GUIDE বাটন
+        findViewById<Button>(R.id.btnGuide).setOnClickListener {
+            tvManager.sendKey("KEY_GUIDE")
+            tvManager.sendKey("KEY_EPG")
+        }
+
+        // ফিক্সড: E-MANUAL বাটন
+        findViewById<Button>(R.id.btnEManual).setOnClickListener {
+            tvManager.sendKey("KEY_EMARKET")
+            tvManager.sendKey("KEY_HELP")
+            tvManager.sendKey("KEY_CONTENTS")
+        }
+
+        // ফিক্সড: INFO বাটন
+        findViewById<Button>(R.id.btnInfo).setOnClickListener {
+            tvManager.sendKey("KEY_INFO")
+        }
 
         findViewById<Button>(R.id.btnUp).setOnClickListener { tvManager.sendKey("KEY_UP") }
         findViewById<Button>(R.id.btnDown).setOnClickListener { tvManager.sendKey("KEY_DOWN") }
@@ -289,11 +305,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         findViewById<Button>(R.id.btnReturn).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
         findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
 
-        findViewById<Button>(R.id.btnPicSize).setOnClickListener { tvManager.sendKey("KEY_PICTURE_SIZE") }
-        findViewById<Button>(R.id.btnPicture).setOnClickListener { tvManager.sendKey("KEY_PICTURE_MODE") }
-        findViewById<Button>(R.id.btnAdSubt).setOnClickListener { tvManager.sendKey("KEY_SUBTITLE") }
-        findViewById<Button>(R.id.btnStop).setOnClickListener { tvManager.sendKey("KEY_STOP") }
+        // ফিক্সড: PIC SIZE বাটন
+        findViewById<Button>(R.id.btnPicSize).setOnClickListener {
+            tvManager.sendKey("KEY_ASPECT")
+            tvManager.sendKey("KEY_PMODE")
+        }
 
+        // ফিক্সড: PICTURE বাটন
+        findViewById<Button>(R.id.btnPicture).setOnClickListener {
+            tvManager.sendKey("KEY_PICTURE_SIZE")
+            tvManager.sendKey("KEY_PICTURE_MODE")
+        }
+
+        // ফিক্সড: AD/SUBT বাটন
+        findViewById<Button>(R.id.btnAdSubt).setOnClickListener {
+            tvManager.sendKey("KEY_SUB_TITLE")
+            tvManager.sendKey("KEY_CAPTION")
+        }
+
+        findViewById<Button>(R.id.btnStop).setOnClickListener { tvManager.sendKey("KEY_STOP") }
         findViewById<Button>(R.id.btnRewind).setOnClickListener { tvManager.sendKey("KEY_REWIND") }
         findViewById<Button>(R.id.btnPlay).setOnClickListener { tvManager.sendKey("KEY_PLAY") }
         findViewById<Button>(R.id.btnPause).setOnClickListener { tvManager.sendKey("KEY_PAUSE") }
@@ -359,36 +389,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun checkPermissions() {
-        val needed = mutableListOf<String>()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            needed.add(Manifest.permission.RECORD_AUDIO)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.BLUETOOTH_CONNECT)
-            }
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.BLUETOOTH_ADVERTISE)
-            }
-        }
-        if (needed.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, needed.toTypedArray(), 101)
-        } else {
-            startBluetooth()
-        }
-    }
-
-    private fun startBluetooth() {
-        try {
-            btMouseManager = BluetoothMouseManager(this).apply {
-                init()
-            }
-        } catch (_: Exception) {}
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        startBluetooth()
     }
 
     override fun onResume() {
@@ -410,7 +413,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val dx = (-event.values[2] * speedFactor).toInt()
             val dy = (-event.values[0] * speedFactor).toInt()
             if (dx != 0 || dy != 0) {
-                btMouseManager?.sendMouseMovement(dx, dy)
+                tvManager.sendWifiMouseMove(dx, dy)
             }
         }
     }
@@ -424,6 +427,5 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if (multicastLock?.isHeld == true) multicastLock?.release()
         } catch (_: Exception) {}
         tvManager.disconnect()
-        btMouseManager?.cleanup()
     }
 }
