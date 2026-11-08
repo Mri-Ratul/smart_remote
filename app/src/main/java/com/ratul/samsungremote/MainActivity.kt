@@ -2,8 +2,7 @@ package com.ratul.samsungremote
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothManager
+import android.bluetooth.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -16,18 +15,15 @@ import android.hardware.SensorManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ListView
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -35,10 +31,127 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlin.math.abs
 
+// Bluetooth HID Mouse Controller Embedded directly to eliminate missing references
+@SuppressLint("MissingPermission")
+class AppBluetoothHidMouse(private val context: Context) {
+    private val tag = "AppBtHidMouse"
+    private var bluetoothManager: BluetoothManager? = null
+    private var bluetoothAdapter: BluetoothAdapter? = null
+    private var hidDevice: BluetoothHidDevice? = null
+    var connectedDevice: BluetoothDevice? = null
+        private set
+
+    var onConnectionChanged: ((Boolean, String) -> Unit)? = null
+
+    private val mouseDescriptor = byteArrayOf(
+        0x05.toByte(), 0x01.toByte(),
+        0x09.toByte(), 0x02.toByte(),
+        0xa1.toByte(), 0x01.toByte(),
+        0x09.toByte(), 0x01.toByte(),
+        0xa1.toByte(), 0x00.toByte(),
+        0x05.toByte(), 0x09.toByte(),
+        0x19.toByte(), 0x01.toByte(),
+        0x29.toByte(), 0x03.toByte(),
+        0x15.toByte(), 0x00.toByte(),
+        0x25.toByte(), 0x01.toByte(),
+        0x95.toByte(), 0x03.toByte(),
+        0x75.toByte(), 0x01.toByte(),
+        0x81.toByte(), 0x02.toByte(),
+        0x95.toByte(), 0x01.toByte(),
+        0x75.toByte(), 0x05.toByte(),
+        0x81.toByte(), 0x03.toByte(),
+        0x05.toByte(), 0x01.toByte(),
+        0x09.toByte(), 0x30.toByte(),
+        0x09.toByte(), 0x31.toByte(),
+        0x15.toByte(), 0x81.toByte(),
+        0x25.toByte(), 0x7f.toByte(),
+        0x75.toByte(), 0x08.toByte(),
+        0x95.toByte(), 0x02.toByte(),
+        0x81.toByte(), 0x06.toByte(),
+        0xc0.toByte(),
+        0xc0.toByte()
+    )
+
+    private val callback = object : BluetoothHidDevice.Callback() {
+        override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
+            super.onConnectionStateChanged(device, state)
+            val devName = device?.name ?: "TV"
+            if (state == BluetoothProfile.STATE_CONNECTED) {
+                connectedDevice = device
+                onConnectionChanged?.invoke(true, devName)
+                Log.d(tag, "Connected as Bluetooth Mouse to $devName")
+            } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
+                connectedDevice = null
+                onConnectionChanged?.invoke(false, devName)
+                Log.d(tag, "Bluetooth Mouse Disconnected")
+            }
+        }
+    }
+
+    private val serviceListener = object : BluetoothProfile.ServiceListener {
+        override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
+            if (profile == BluetoothProfile.HID_DEVICE) {
+                hidDevice = proxy as? BluetoothHidDevice
+                registerHidApp()
+            }
+        }
+
+        override fun onServiceDisconnected(profile: Int) {
+            if (profile == BluetoothProfile.HID_DEVICE) {
+                hidDevice = null
+            }
+        }
+    }
+
+    fun initialize() {
+        bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        bluetoothAdapter = bluetoothManager?.adapter
+        bluetoothAdapter?.getProfileProxy(context, serviceListener, BluetoothProfile.HID_DEVICE)
+    }
+
+    private fun registerHidApp() {
+        val sdp = BluetoothHidDeviceAppSdpSettings(
+            "Samsung Remote Mouse",
+            "Universal Smart Remote Mouse",
+            "Samsung Remote",
+            0x02.toByte(),
+            mouseDescriptor
+        )
+        hidDevice?.registerApp(sdp, null, null, context.mainExecutor, callback)
+    }
+
+    fun connectDevice(device: BluetoothDevice) {
+        hidDevice?.connect(device)
+    }
+
+    fun sendMouseMove(dx: Int, dy: Int) {
+        val dev = connectedDevice ?: return
+        val clampedX = dx.coerceIn(-127, 127).toByte()
+        val clampedY = dy.coerceIn(-127, 127).toByte()
+        val report = byteArrayOf(0x00, clampedX, clampedY)
+        hidDevice?.sendReport(dev, 0, report)
+    }
+
+    fun sendMouseClick() {
+        val dev = connectedDevice ?: return
+        hidDevice?.sendReport(dev, 0, byteArrayOf(0x01, 0x00, 0x00))
+        Handler(Looper.getMainLooper()).postDelayed({
+            hidDevice?.sendReport(dev, 0, byteArrayOf(0x00, 0x00, 0x00))
+        }, 50)
+    }
+
+    fun destroy() {
+        try {
+            hidDevice?.unregisterApp()
+            bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
+        } catch (_: Exception) {}
+    }
+}
+
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var tvManager: SamsungTvManager
-    private lateinit var btMouseManager: BluetoothHidMouseManager
+    private lateinit var btMouseManager: AppBluetoothHidMouse
     private var speechRecognizer: SpeechRecognizer? = null
 
     private var sensorManager: SensorManager? = null
@@ -92,7 +205,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } catch (_: Exception) {}
 
         tvManager = SamsungTvManager(this)
-        btMouseManager = BluetoothHidMouseManager(this)
+        btMouseManager = AppBluetoothHidMouse(this)
         btMouseManager.initialize()
 
         try {
@@ -110,14 +223,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         containerAiVoice = findViewById(R.id.containerAiVoice)
         lvTvApps = findViewById(R.id.lvTvApps)
 
-        tvManager.onStatusChanged = { status: String ->
+        tvManager.onStatusChanged = { status ->
             runOnUiThread {
                 val ip = tvManager.getSavedIp()
                 tvStatus.text = if (ip.isNotEmpty()) "$status ($ip)" else status
             }
         }
 
-        btMouseManager.onConnectionChanged = { isConnected: Boolean, devName: String ->
+        btMouseManager.onConnectionChanged = { isConnected, devName ->
             runOnUiThread {
                 if (isConnected) {
                     tvMouseModeInfo.text = "CONNECTED VIA BLUETOOTH HID: $devName"
@@ -185,7 +298,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         adapter.startDiscovery()
         Toast.makeText(this, "Scanning Bluetooth Devices...", Toast.LENGTH_SHORT).show()
 
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        Handler(Looper.getMainLooper()).postDelayed({
             adapter.cancelDiscovery()
             showBluetoothDevicesDialog()
         }, 4000)
@@ -337,8 +450,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val btnRefresh = findViewById<Button>(R.id.btnRefreshApps)
 
         fun loadApps() {
-            tvManager.fetchInstalledApps { apps: List<TvAppItem> ->
-                val appTitles: List<String> = apps.map { it.name }
+            tvManager.fetchInstalledApps { apps ->
+                val appTitles = apps.map { it.name }
                 val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, appTitles)
                 lvTvApps.adapter = adapter
 
