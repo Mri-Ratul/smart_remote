@@ -8,6 +8,7 @@ import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -21,6 +22,8 @@ import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
+
+data class TvAppItem(val id: String, val name: String)
 
 class SamsungTvManager(private val context: Context) {
 
@@ -138,8 +141,9 @@ class SamsungTvManager(private val context: Context) {
             val ipInt = wifi.connectionInfo.ipAddress
             if (ipInt == 0) return ""
             return "${ipInt and 0xFF}.${ipInt shr 8 and 0xFF}.${ipInt shr 16 and 0xFF}"
-        } catch (_: Exception) {}
-        return ""
+        } catch (_: Exception) {
+            return ""
+        }
     }
 
     fun connect(rawIp: String) {
@@ -214,37 +218,6 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // টাইজেন ব্রাউজার পয়েন্টার ইভেন্ট (যদি ব্রাউজারে সাপোর্ট করে)
-    fun sendPointerMove(dx: Int, dy: Int) {
-        if (!isConnected || webSocket == null) return
-
-        val payload = JSONObject().apply {
-            put("method", "ms.remote.control")
-            put("params", JSONObject().apply {
-                put("Cmd", "Move")
-                put("Position", JSONObject().apply {
-                    put("x", dx)
-                    put("y", dy)
-                })
-                put("TypeOfRemote", "SendPointerEvent")
-            })
-        }
-        webSocket?.send(payload.toString())
-    }
-
-    fun sendPointerClick() {
-        if (!isConnected || webSocket == null) return
-
-        val payload = JSONObject().apply {
-            put("method", "ms.remote.control")
-            put("params", JSONObject().apply {
-                put("Cmd", "LeftClick")
-                put("TypeOfRemote", "SendPointerEvent")
-            })
-        }
-        webSocket?.send(payload.toString())
-    }
-
     fun cyclePictureMode() {
         sendKey("KEY_PICTURE_MODE")
         sendKey("KEY_PMODE")
@@ -280,18 +253,63 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    fun launchYouTube() {
+    // টিভির ইনস্টলড অ্যাপস ফেচ করা
+    fun fetchInstalledApps(callback: (List<TvAppItem>) -> Unit) {
+        val tvIp = getSavedIp()
+        if (tvIp.isEmpty()) {
+            callback(emptyList())
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val appsList = mutableListOf<TvAppItem>()
+            try {
+                // স্যামসাং টাইজেন অ্যাপ্লিকেশন ইনফো এন্ডপয়েন্ট
+                val request = Request.Builder()
+                    .url("http://$tvIp:8001/api/v2/applications")
+                    .get()
+                    .build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string() ?: ""
+
+                if (body.isNotEmpty()) {
+                    val json = JSONObject(body)
+                    val dataArr = json.optJSONArray("data") ?: JSONArray()
+                    for (i in 0 until dataArr.length()) {
+                        val item = dataArr.getJSONObject(i)
+                        appsList.add(TvAppItem(item.optString("appId"), item.optString("name")))
+                    }
+                }
+            } catch (_: Exception) {}
+
+            // যদি এন্ডপয়েন্ট ব্লক থাকে তবে স্ট্যান্ডার্ড অ্যাপস ডিফল্ট যুক্ত হবে
+            if (appsList.isEmpty()) {
+                appsList.add(TvAppItem("111299001912", "YouTube"))
+                appsList.add(TvAppItem("3201512006785", "Netflix"))
+                appsList.add(TvAppItem("3201512006963", "Amazon Prime Video"))
+                appsList.add(TvAppItem("org.tizen.browser", "Internet Web Browser"))
+                appsList.add(TvAppItem("11101200001", "Facebook Watch"))
+            }
+
+            withContext(Dispatchers.Main) {
+                callback(appsList)
+            }
+        }
+    }
+
+    // নির্দিষ্ট অ্যাপ টিভিতে ওপেন করা
+    fun launchApp(appId: String) {
         val tvIp = getSavedIp()
         if (tvIp.isEmpty()) return
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val request = Request.Builder()
-                    .url("http://$tvIp:8001/api/v2/applications/111299001912")
+                    .url("http://$tvIp:8001/api/v2/applications/$appId")
                     .post(ByteArray(0).toRequestBody(null))
                     .build()
                 client.newCall(request).execute()
             } catch (_: Exception) {
-                sendKey("KEY_YOUTUBE")
+                if (appId == "111299001912") sendKey("KEY_YOUTUBE")
             }
         }
     }
@@ -310,15 +328,9 @@ class SamsungTvManager(private val context: Context) {
                     .url("http://$tvIp:8001/api/v2/applications/111299001912")
                     .post(body)
                     .build()
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    launchYouTube()
-                    delay(1200)
-                    sendText(query)
-                    sendKey("KEY_ENTER")
-                }
+                client.newCall(request).execute()
             } catch (_: Exception) {
-                launchYouTube()
+                launchApp("111299001912")
                 delay(1200)
                 sendText(query)
                 sendKey("KEY_ENTER")
