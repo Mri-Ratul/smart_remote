@@ -8,19 +8,18 @@ import android.os.Looper
 import android.util.Log
 
 @SuppressLint("MissingPermission")
-class BluetoothHidMouseManager(private val context: Context) {
+class BluetoothMouseManager(private val context: Context) {
 
-    private val tag = "BtHidMouseManager"
-    private var bluetoothManager: BluetoothManager? = null
+    private val tag = "BtMouseManager"
     private var bluetoothAdapter: BluetoothAdapter? = null
-    private var hidDevice: BluetoothHidDevice? = null
+    private var hidDeviceApp: BluetoothHidDevice? = null
     var connectedDevice: BluetoothDevice? = null
         private set
 
     var onConnectionChanged: ((Boolean, String) -> Unit)? = null
 
-    // Standard HID Mouse Descriptor (Reports relative X, Y movement and 3 buttons)
-    private val mouseDescriptor = byteArrayOf(
+    // Standard USB/Bluetooth HID Mouse Descriptor
+    private val mouseReportDescriptor = byteArrayOf(
         0x05.toByte(), 0x01.toByte(), // USAGE_PAGE (Generic Desktop)
         0x09.toByte(), 0x02.toByte(), // USAGE (Mouse)
         0xa1.toByte(), 0x01.toByte(), // COLLECTION (Application)
@@ -56,10 +55,11 @@ class BluetoothHidMouseManager(private val context: Context) {
             if (state == BluetoothProfile.STATE_CONNECTED) {
                 connectedDevice = device
                 onConnectionChanged?.invoke(true, devName)
-                Log.d(tag, "Paired & Connected as HID Mouse with $devName")
+                Log.d(tag, "Connected as Bluetooth Mouse to $devName")
             } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
                 connectedDevice = null
                 onConnectionChanged?.invoke(false, devName)
+                Log.d(tag, "Bluetooth Mouse Disconnected")
             }
         }
     }
@@ -67,61 +67,65 @@ class BluetoothHidMouseManager(private val context: Context) {
     private val serviceListener = object : BluetoothProfile.ServiceListener {
         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
             if (profile == BluetoothProfile.HID_DEVICE) {
-                hidDevice = proxy as? BluetoothHidDevice
-                registerHidApp()
+                hidDeviceApp = proxy as? BluetoothHidDevice
+                registerApp()
             }
         }
 
         override fun onServiceDisconnected(profile: Int) {
             if (profile == BluetoothProfile.HID_DEVICE) {
-                hidDevice = null
+                hidDeviceApp = null
             }
         }
     }
 
-    fun initialize() {
-        bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        bluetoothAdapter = bluetoothManager?.adapter
+    fun init() {
+        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        bluetoothAdapter = manager?.adapter
         bluetoothAdapter?.getProfileProxy(context, serviceListener, BluetoothProfile.HID_DEVICE)
     }
 
-    private fun registerHidApp() {
+    private fun registerApp() {
+        // ফিক্সড: মাউসের জন্য সঠিক সাবক্লাস এবং SDP বাইট
         val sdp = BluetoothHidDeviceAppSdpSettings(
-            "Smart Remote Mouse",
+            "Samsung Remote Mouse",
             "Universal Smart Remote & Air Mouse",
-            "Samsung Remote Pro",
-            BluetoothHidDeviceAppSdpSettings.SUBCLASS1_COMBO,
-            mouseDescriptor
+            "Samsung Remote",
+            BluetoothHidDeviceAppSdpSettings.SUBCLASS2_POINTING,
+            mouseReportDescriptor
         )
-        hidDevice?.registerApp(sdp, null, null, context.mainExecutor, callback)
+        hidDeviceApp?.registerApp(sdp, null, null, context.mainExecutor, callback)
     }
 
-    fun connectToDevice(device: BluetoothDevice) {
-        hidDevice?.connect(device)
+    fun connectDevice(device: BluetoothDevice) {
+        hidDeviceApp?.connect(device)
     }
 
-    fun sendMouseMove(dx: Int, dy: Int) {
-        val dev = connectedDevice ?: return
+    fun sendMouseMovement(dx: Int, dy: Int) {
+        val device = connectedDevice ?: return
         val clampedX = dx.coerceIn(-127, 127).toByte()
         val clampedY = dy.coerceIn(-127, 127).toByte()
+
         val report = byteArrayOf(0x00, clampedX, clampedY)
-        hidDevice?.sendReport(dev, 0, report)
+        hidDeviceApp?.sendReport(device, 0, report)
     }
 
     fun sendMouseClick() {
-        val dev = connectedDevice ?: return
-        // Mouse Left Down
-        hidDevice?.sendReport(dev, 0, byteArrayOf(0x01, 0x00, 0x00))
+        val device = connectedDevice ?: return
+
+        // Button Down
+        hidDeviceApp?.sendReport(device, 0, byteArrayOf(0x01, 0x00, 0x00))
+
+        // Button Up
         Handler(Looper.getMainLooper()).postDelayed({
-            // Mouse Left Up
-            hidDevice?.sendReport(dev, 0, byteArrayOf(0x00, 0x00, 0x00))
+            hidDeviceApp?.sendReport(device, 0, byteArrayOf(0x00, 0x00, 0x00))
         }, 50)
     }
 
-    fun destroy() {
+    fun cleanup() {
         try {
-            hidDevice?.unregisterApp()
-            bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
+            hidDeviceApp?.unregisterApp()
+            bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDeviceApp)
         } catch (_: Exception) {}
     }
 }
