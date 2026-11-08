@@ -31,12 +31,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlin.math.abs
 
-// Bluetooth HID Mouse Controller Embedded directly to eliminate missing references
 @SuppressLint("MissingPermission")
 class AppBluetoothHidMouse(private val context: Context) {
     private val tag = "AppBtHidMouse"
     private var bluetoothManager: BluetoothManager? = null
-    private var bluetoothAdapter: BluetoothAdapter? = null
+    var bluetoothAdapter: BluetoothAdapter? = null
+        private set
     private var hidDevice: BluetoothHidDevice? = null
     var connectedDevice: BluetoothDevice? = null
         private set
@@ -44,32 +44,32 @@ class AppBluetoothHidMouse(private val context: Context) {
     var onConnectionChanged: ((Boolean, String) -> Unit)? = null
 
     private val mouseDescriptor = byteArrayOf(
-        0x05.toByte(), 0x01.toByte(),
-        0x09.toByte(), 0x02.toByte(),
-        0xa1.toByte(), 0x01.toByte(),
-        0x09.toByte(), 0x01.toByte(),
-        0xa1.toByte(), 0x00.toByte(),
-        0x05.toByte(), 0x09.toByte(),
-        0x19.toByte(), 0x01.toByte(),
-        0x29.toByte(), 0x03.toByte(),
-        0x15.toByte(), 0x00.toByte(),
-        0x25.toByte(), 0x01.toByte(),
-        0x95.toByte(), 0x03.toByte(),
-        0x75.toByte(), 0x01.toByte(),
-        0x81.toByte(), 0x02.toByte(),
-        0x95.toByte(), 0x01.toByte(),
-        0x75.toByte(), 0x05.toByte(),
-        0x81.toByte(), 0x03.toByte(),
-        0x05.toByte(), 0x01.toByte(),
-        0x09.toByte(), 0x30.toByte(),
-        0x09.toByte(), 0x31.toByte(),
-        0x15.toByte(), 0x81.toByte(),
-        0x25.toByte(), 0x7f.toByte(),
-        0x75.toByte(), 0x08.toByte(),
-        0x95.toByte(), 0x02.toByte(),
-        0x81.toByte(), 0x06.toByte(),
-        0xc0.toByte(),
-        0xc0.toByte()
+        0x05.toByte(), 0x01.toByte(), // USAGE_PAGE (Generic Desktop)
+        0x09.toByte(), 0x02.toByte(), // USAGE (Mouse)
+        0xa1.toByte(), 0x01.toByte(), // COLLECTION (Application)
+        0x09.toByte(), 0x01.toByte(), //   USAGE (Pointer)
+        0xa1.toByte(), 0x00.toByte(), //   COLLECTION (Physical)
+        0x05.toByte(), 0x09.toByte(), //     USAGE_PAGE (Button)
+        0x19.toByte(), 0x01.toByte(), //     USAGE_MINIMUM (Button 1)
+        0x29.toByte(), 0x03.toByte(), //     USAGE_MAXIMUM (Button 3)
+        0x15.toByte(), 0x00.toByte(), //     LOGICAL_MINIMUM (0)
+        0x25.toByte(), 0x01.toByte(), //     LOGICAL_MAXIMUM (1)
+        0x95.toByte(), 0x03.toByte(), //     REPORT_COUNT (3)
+        0x75.toByte(), 0x01.toByte(), //     REPORT_SIZE (1)
+        0x81.toByte(), 0x02.toByte(), //     INPUT (Data,Var,Abs)
+        0x95.toByte(), 0x01.toByte(), //     REPORT_COUNT (1)
+        0x75.toByte(), 0x05.toByte(), //     REPORT_SIZE (5)
+        0x81.toByte(), 0x03.toByte(), //     INPUT (Cnst,Var,Abs)
+        0x05.toByte(), 0x01.toByte(), //     USAGE_PAGE (Generic Desktop)
+        0x09.toByte(), 0x30.toByte(), //     USAGE (X)
+        0x09.toByte(), 0x31.toByte(), //     USAGE (Y)
+        0x15.toByte(), 0x81.toByte(), //     LOGICAL_MINIMUM (-127)
+        0x25.toByte(), 0x7f.toByte(), //     LOGICAL_MAXIMUM (127)
+        0x75.toByte(), 0x08.toByte(), //     REPORT_SIZE (8)
+        0x95.toByte(), 0x02.toByte(), //     REPORT_COUNT (2)
+        0x81.toByte(), 0x06.toByte(), //     INPUT (Data,Var,Rel)
+        0xc0.toByte(),                 //   END_COLLECTION
+        0xc0.toByte()                  // END_COLLECTION
     )
 
     private val callback = object : BluetoothHidDevice.Callback() {
@@ -109,7 +109,7 @@ class AppBluetoothHidMouse(private val context: Context) {
         bluetoothAdapter?.getProfileProxy(context, serviceListener, BluetoothProfile.HID_DEVICE)
     }
 
-    private fun registerHidApp() {
+    fun registerHidApp() {
         val sdp = BluetoothHidDeviceAppSdpSettings(
             "Samsung Remote Mouse",
             "Universal Smart Remote Mouse",
@@ -246,14 +246,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         findViewById<Button>(R.id.btnMenu).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menu.add("Scan Network for TV (Wi-Fi)")
-            popup.menu.add("Scan & Pair Bluetooth TV (Mouse)")
+            popup.menu.add("Make Phone Discoverable & Pair TV")
             popup.menu.add("Enter IP Manually")
             popup.menu.add("Disconnect TV")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.title) {
                     "Scan Network for TV (Wi-Fi)" -> tvManager.autoDiscoverTv()
-                    "Scan & Pair Bluetooth TV (Mouse)" -> startBluetoothScan()
+                    "Make Phone Discoverable & Pair TV" -> makePhoneDiscoverableAndScan()
                     "Enter IP Manually" -> showManualIpDialog()
                     "Disconnect TV" -> {
                         tvManager.disconnect()
@@ -284,40 +284,50 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         registerReceiver(btReceiver, filter)
     }
 
+    // ফোনকে টিভিতে দৃশ্যমান করার মেকানিজম
     @SuppressLint("MissingPermission")
-    private fun startBluetoothScan() {
-        val btManager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val adapter = btManager?.adapter
-
-        if (adapter == null || !adapter.isEnabled) {
-            Toast.makeText(this, "Please turn on Bluetooth first", Toast.LENGTH_SHORT).show()
+    private fun makePhoneDiscoverableAndScan() {
+        val adapter = btMouseManager.bluetoothAdapter
+        if (adapter == null) {
+            Toast.makeText(this, "Bluetooth not supported on this device", Toast.LENGTH_SHORT).show()
             return
         }
 
+        if (!adapter.isEnabled) {
+            Toast.makeText(this, "Please enable Bluetooth first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // ফোনকে ৩০০ সেকেন্ডের জন্য সবার কাছে দৃশ্যমান করা
+        val discoverableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
+            putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+        }
+        startActivity(discoverableIntent)
+
+        // HID প্রোফাইল রি-রেজিস্টার
+        btMouseManager.registerHidApp()
+
         discoveredBtDevices.clear()
         adapter.startDiscovery()
-        Toast.makeText(this, "Scanning Bluetooth Devices...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Phone is now Visible! Check TV Bluetooth list now.", Toast.LENGTH_LONG).show()
 
         Handler(Looper.getMainLooper()).postDelayed({
             adapter.cancelDiscovery()
-            showBluetoothDevicesDialog()
-        }, 4000)
+            if (discoveredBtDevices.isNotEmpty()) {
+                showBluetoothDevicesDialog()
+            }
+        }, 5000)
     }
 
     @SuppressLint("MissingPermission")
     private fun showBluetoothDevicesDialog() {
-        if (discoveredBtDevices.isEmpty()) {
-            Toast.makeText(this, "No Bluetooth devices found. Put TV in Pairing Mode.", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        val deviceNames = discoveredBtDevices.map { "${it.name ?: "Unknown Device"} (${it.address})" }.toTypedArray()
+        val deviceNames = discoveredBtDevices.map { "${it.name ?: "TV/Device"} (${it.address})" }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("Select TV to Pair as HID Remote")
+            .setTitle("Select TV to Connect")
             .setItems(deviceNames) { _, index ->
                 val selectedDevice = discoveredBtDevices[index]
-                Toast.makeText(this, "Pairing with ${selectedDevice.name}...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Connecting to ${selectedDevice.name}...", Toast.LENGTH_SHORT).show()
                 btMouseManager.connectDevice(selectedDevice)
             }
             .setNegativeButton("Cancel", null)
@@ -345,6 +355,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
+    // টাচপ্যাড মাউস
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPureMouseTouchpad() {
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
@@ -400,6 +411,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    // এয়ার মাউস
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPureAirMouse() {
         val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
@@ -467,6 +479,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         loadApps()
     }
 
+    // ভয়েস ইনপুট হ্যান্ডলিং
     private fun setupDualVoiceInput() {
         val btnBangla = findViewById<Button>(R.id.btnMicBangla)
         val btnEnglish = findViewById<Button>(R.id.btnMicEnglish)
@@ -523,20 +536,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnBangla.setOnClickListener { listenVoice("bn-BD") }
         btnEnglish.setOnClickListener { listenVoice("en-US") }
 
+        // ফিক্সড: অতিরিক্ত কোনো বাটন বা অক্ষর প্রেস যাতে না হয়, শুধুই টেক্সট পুশ হবে
         btnSendUniversal.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
                 tvManager.sendText(text)
-                tvManager.sendKey("KEY_ENTER")
-                Toast.makeText(this, "Pushed to TV: \"$text\"", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Pushed: \"$text\"", Toast.LENGTH_SHORT).show()
             }
         }
 
+        // ফিক্সড: ইউটিউবে নির্ভরযোগ্য ভয়েস সার্চ এক্সিকিউশন
         btnSendYouTube.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
                 tvManager.launchYouTubeWithSearch(text)
-                Toast.makeText(this, "Playing on YouTube: \"$text\"", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Searching YouTube: \"$text\"", Toast.LENGTH_SHORT).show()
             }
         }
     }
