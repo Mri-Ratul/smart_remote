@@ -38,7 +38,7 @@
             android:textStyle="bold" />
     </RelativeLayout>
 
-    <!-- 1. Physical Remote Buttons View -->
+    <!-- 1. Physical Buttons Remote Container -->
     <ScrollView
         android:id="@+id/containerButtons"
         android:layout_width="match_parent"
@@ -65,7 +65,7 @@
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="12dp">
 
-                <!-- Row 1: Power, YouTube, Source (No Fixed Width, Auto Screen Fit) -->
+                <!-- Row 1: Power, YouTube, Source -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -79,7 +79,6 @@
                         android:layout_marginEnd="4dp"
                         android:layout_weight="1"
                         android:backgroundTint="#E50914"
-                        android:maxLines="1"
                         android:singleLine="true"
                         android:text="POWER"
                         android:textColor="#FFFFFF"
@@ -93,7 +92,6 @@
                         android:layout_marginHorizontal="4dp"
                         android:layout_weight="1.3"
                         android:backgroundTint="#CC0000"
-                        android:maxLines="1"
                         android:singleLine="true"
                         android:text="▶ YouTube"
                         android:textColor="#FFFFFF"
@@ -107,7 +105,6 @@
                         android:layout_marginStart="4dp"
                         android:layout_weight="1"
                         android:backgroundTint="#252A38"
-                        android:maxLines="1"
                         android:singleLine="true"
                         android:text="SOURCE"
                         android:textColor="#EEEEEE"
@@ -336,7 +333,7 @@
                         android:textSize="9sp" />
                 </LinearLayout>
 
-                <!-- Row 6: Picture Controls (Fixed Modes) -->
+                <!-- Row 6: Picture Controls -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -447,7 +444,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- 2. Pointer Surface Container (Hardware Pointer for Browser) -->
+    <!-- 2. Touchpad Surface (Bluetooth / Wi-Fi Mouse) -->
     <LinearLayout
         android:id="@+id/containerTouchpad"
         android:layout_width="match_parent"
@@ -459,10 +456,11 @@
         android:visibility="gone">
 
         <TextView
+            android:id="@+id/tvMouseModeInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="TIZEN POINTER SURFACE (BROWSER)"
+            android:text="BLUETOOTH HID MOUSE SURFACE"
             android:textColor="#00E5FF"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -504,7 +502,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 3. Air Mouse Container (Continuous Pointer Stream) -->
+    <!-- 3. Air Mouse Container -->
     <LinearLayout
         android:id="@+id/containerAirMouse"
         android:layout_width="match_parent"
@@ -520,7 +518,7 @@
             android:id="@+id/tvAirMouseStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Hold button &amp; point phone to steer cursor"
+            android:text="Hold button &amp; move phone to control cursor"
             android:textColor="#00E5FF"
             android:textSize="13sp"
             android:textStyle="bold" />
@@ -548,7 +546,50 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 4. Voice Input Container (Bangla & English Separate Buttons) -->
+    <!-- 4. Installed TV Apps Container -->
+    <LinearLayout
+        android:id="@+id/containerTvApps"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
+        android:layout_below="@id/headerLayout"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Installed TV Apps"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnRefreshApps"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_alignParentEnd="true"
+                android:backgroundTint="#252A38"
+                android:text="Refresh"
+                android:textColor="#00E5FF"
+                android:textSize="11sp" />
+        </RelativeLayout>
+
+        <ListView
+            android:id="@+id/lvTvApps"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="12dp"
+            android:divider="#202433"
+            android:dividerHeight="1dp" />
+    </LinearLayout>
+
+    <!-- 5. Voice Input Container (Universal + YouTube Direct) -->
     <LinearLayout
         android:id="@+id/containerAiVoice"
         android:layout_width="match_parent"
@@ -563,7 +604,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Voice Search &amp; YouTube Direct"
+            android:text="Voice Input &amp; Search"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -573,68 +614,81 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Select language to speak"
+            android:text="Choose language to speak"
             android:textColor="#8892B0"
             android:textSize="12sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
             android:gravity="center"
             android:orientation="horizontal">
 
             <Button
                 android:id="@+id/btnMicBangla"
                 android:layout_width="0dp"
-                android:layout_height="90dp"
+                android:layout_height="80dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
                 android:backgroundTint="#0284C7"
                 android:text="🎙&#10;SPEAK&#10;BANGLA"
                 android:textColor="#FFFFFF"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnMicEnglish"
                 android:layout_width="0dp"
-                android:layout_height="90dp"
+                android:layout_height="80dp"
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:backgroundTint="#2563EB"
                 android:text="🎙&#10;SPEAK&#10;ENGLISH"
                 android:textColor="#FFFFFF"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
         <EditText
             android:id="@+id/etTranscribedText"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:layout_marginTop="16dp"
+            android:layout_height="70dp"
+            android:layout_marginTop="14dp"
             android:background="#161824"
             android:gravity="top|start"
-            android:hint="Spoken voice will appear here..."
-            android:padding="12dp"
+            android:hint="Voice text will appear here..."
+            android:padding="10dp"
             android:textColor="#FFFFFF"
             android:textColorHint="#555E75"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
 
+        <!-- Universal Push Button (Any app/browser) -->
         <Button
-            android:id="@+id/btnSendVoiceToTv"
+            android:id="@+id/btnSendVoiceUniversal"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="14dp"
-            android:backgroundTint="#CC0000"
-            android:text="PLAY ON YOUTUBE APP"
+            android:layout_height="46dp"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#10B981"
+            android:text="SEND TO CURRENT SCREEN / BROWSER"
             android:textColor="#FFFFFF"
-            android:textSize="13sp"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- Specific YouTube Button -->
+        <Button
+            android:id="@+id/btnSendVoiceYouTube"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#CC0000"
+            android:text="DIRECT PLAY ON YOUTUBE"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Bottom Navigation Bar -->
+    <!-- Bottom Navigation Bar (5 Tabs) -->
     <LinearLayout
         android:id="@+id/bottomNavBar"
         android:layout_width="match_parent"
@@ -652,7 +706,7 @@
             android:backgroundTint="#1D2230"
             android:text="Buttons"
             android:textColor="#00E5FF"
-            android:textSize="10sp"
+            android:textSize="9sp"
             android:textStyle="bold" />
 
         <Button
@@ -663,7 +717,7 @@
             android:backgroundTint="#131620"
             android:text="Touchpad"
             android:textColor="#8892B0"
-            android:textSize="10sp" />
+            android:textSize="9sp" />
 
         <Button
             android:id="@+id/navAirMouse"
@@ -673,7 +727,17 @@
             android:backgroundTint="#131620"
             android:text="Air Mouse"
             android:textColor="#8892B0"
-            android:textSize="10sp" />
+            android:textSize="9sp" />
+
+        <Button
+            android:id="@+id/navApps"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:backgroundTint="#131620"
+            android:text="Apps"
+            android:textColor="#8892B0"
+            android:textSize="9sp" />
 
         <Button
             android:id="@+id/navAiVoice"
@@ -683,7 +747,7 @@
             android:backgroundTint="#131620"
             android:text="AI Voice"
             android:textColor="#8892B0"
-            android:textSize="10sp" />
+            android:textSize="9sp" />
     </LinearLayout>
 
 </RelativeLayout>
