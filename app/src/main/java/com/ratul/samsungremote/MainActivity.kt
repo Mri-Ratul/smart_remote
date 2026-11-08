@@ -2,7 +2,6 @@ package com.ratul.samsungremote
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
@@ -22,12 +21,19 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.MotionEvent
 import android.view.View
-import android.widget.*
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ListView
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -59,8 +65,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         @SuppressLint("MissingPermission")
         override fun onReceive(context: Context?, intent: Intent?) {
             if (BluetoothDevice.ACTION_FOUND == intent?.action) {
-                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                if (device != null && !discoveredBtDevices.any { it.address == device.address }) {
+                val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                }
+                if (device != null && discoveredBtDevices.none { it.address == device.address }) {
                     discoveredBtDevices.add(device)
                 }
             }
@@ -81,7 +92,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } catch (_: Exception) {}
 
         tvManager = SamsungTvManager(this)
-        btMouseManager = BluetoothHidMouseManager(this).apply { initialize() }
+        btMouseManager = BluetoothHidMouseManager(this)
+        btMouseManager.initialize()
 
         try {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -98,14 +110,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         containerAiVoice = findViewById(R.id.containerAiVoice)
         lvTvApps = findViewById(R.id.lvTvApps)
 
-        tvManager.onStatusChanged = { status ->
+        tvManager.onStatusChanged = { status: String ->
             runOnUiThread {
                 val ip = tvManager.getSavedIp()
                 tvStatus.text = if (ip.isNotEmpty()) "$status ($ip)" else status
             }
         }
 
-        btMouseManager.onConnectionChanged = { isConnected, devName ->
+        btMouseManager.onConnectionChanged = { isConnected: Boolean, devName: String ->
             runOnUiThread {
                 if (isConnected) {
                     tvMouseModeInfo.text = "CONNECTED VIA BLUETOOTH HID: $devName"
@@ -193,7 +205,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setItems(deviceNames) { _, index ->
                 val selectedDevice = discoveredBtDevices[index]
                 Toast.makeText(this, "Pairing with ${selectedDevice.name}...", Toast.LENGTH_SHORT).show()
-                btMouseManager.connectToDevice(selectedDevice)
+                btMouseManager.connectDevice(selectedDevice)
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -220,7 +232,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
-    // পিওর মাউস টাচপ্যাড (ব্লুটুথ HID ও Wi-Fi উভয় দিয়ে কার্সর ড্রাইভ)
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPureMouseTouchpad() {
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
@@ -249,8 +260,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    val diffX = kotlin.math.abs(event.x - lastPointerX)
-                    val diffY = kotlin.math.abs(event.y - lastPointerY)
+                    val diffX = abs(event.x - lastPointerX)
+                    val diffY = abs(event.y - lastPointerY)
                     if (diffX < 8 && diffY < 8) {
                         if (btMouseManager.connectedDevice != null) {
                             btMouseManager.sendMouseClick()
@@ -322,13 +333,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // টিভির ইনস্টলড অ্যাপস লোড ও লিস্ট ভিউ বাইন্ডিং
     private fun setupAppsList() {
         val btnRefresh = findViewById<Button>(R.id.btnRefreshApps)
 
         fun loadApps() {
-            tvManager.fetchInstalledApps { apps ->
-                val appTitles = apps.map { it.name }
+            tvManager.fetchInstalledApps { apps: List<TvAppItem> ->
+                val appTitles: List<String> = apps.map { it.name }
                 val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, appTitles)
                 lvTvApps.adapter = adapter
 
@@ -344,7 +354,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         loadApps()
     }
 
-    // ভয়েস ইনপুট (ইউনিভার্সাল পুশ + ডিরেক্ট ইউটিউব বাটন)
     private fun setupDualVoiceInput() {
         val btnBangla = findViewById<Button>(R.id.btnMicBangla)
         val btnEnglish = findViewById<Button>(R.id.btnMicEnglish)
@@ -401,7 +410,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnBangla.setOnClickListener { listenVoice("bn-BD") }
         btnEnglish.setOnClickListener { listenVoice("en-US") }
 
-        // ইউনিভার্সাল পুশ বাটন: যেকোনো ওয়েবসাইট, ব্রাউজার বা সার্চ বক্সে লেখা টাইপ করবে
         btnSendUniversal.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
@@ -411,7 +419,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
-        // ডিরেক্ট ইউটিউব বাটন: সরাসরি ইউটিউব অ্যাপ ওপেন করে সার্চ রেজাল্ট দেবে
         btnSendYouTube.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
