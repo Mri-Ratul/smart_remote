@@ -246,7 +246,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         findViewById<Button>(R.id.btnMenu).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menu.add("Scan Network for TV (Wi-Fi)")
-            popup.menu.add("Make Phone Discoverable & Pair TV")
+            popup.menu.add("Pair TV")
             popup.menu.add("Enter IP Manually")
             popup.menu.add("Disconnect TV")
 
