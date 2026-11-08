@@ -2,35 +2,37 @@ package com.ratul.samsungremote
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import kotlin.math.abs
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var tvManager: SamsungTvManager
+    private lateinit var btMouseManager: BluetoothHidMouseManager
     private var speechRecognizer: SpeechRecognizer? = null
 
     private var sensorManager: SensorManager? = null
@@ -39,15 +41,31 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var multicastLock: WifiManager.MulticastLock? = null
 
     private lateinit var tvStatus: TextView
+    private lateinit var tvMouseModeInfo: TextView
     private lateinit var containerButtons: ScrollView
     private lateinit var containerTouchpad: View
     private lateinit var containerAirMouse: View
+    private lateinit var containerTvApps: View
     private lateinit var containerAiVoice: View
+    private lateinit var lvTvApps: ListView
 
-    // মাউস ট্র্যাকিং ভ্যারিয়েবল
     private var lastPointerX = 0f
     private var lastPointerY = 0f
     private var lastPointerTime = 0L
+
+    private val discoveredBtDevices = mutableListOf<BluetoothDevice>()
+
+    private val btReceiver = object : BroadcastReceiver() {
+        @SuppressLint("MissingPermission")
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (BluetoothDevice.ACTION_FOUND == intent?.action) {
+                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                if (device != null && !discoveredBtDevices.any { it.address == device.address }) {
+                    discoveredBtDevices.add(device)
+                }
+            }
+        }
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,6 +81,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } catch (_: Exception) {}
 
         tvManager = SamsungTvManager(this)
+        btMouseManager = BluetoothHidMouseManager(this).apply { initialize() }
 
         try {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -71,10 +90,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } catch (_: Exception) {}
 
         tvStatus = findViewById(R.id.tvTvStatus)
+        tvMouseModeInfo = findViewById(R.id.tvMouseModeInfo)
         containerButtons = findViewById(R.id.containerButtons)
         containerTouchpad = findViewById(R.id.containerTouchpad)
         containerAirMouse = findViewById(R.id.containerAirMouse)
+        containerTvApps = findViewById(R.id.containerTvApps)
         containerAiVoice = findViewById(R.id.containerAiVoice)
+        lvTvApps = findViewById(R.id.lvTvApps)
 
         tvManager.onStatusChanged = { status ->
             runOnUiThread {
@@ -83,21 +105,30 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
-        tvManager.onTvDiscovered = { ip ->
+        btMouseManager.onConnectionChanged = { isConnected, devName ->
             runOnUiThread {
-                Toast.makeText(this, "Discovered TV at $ip", Toast.LENGTH_SHORT).show()
+                if (isConnected) {
+                    tvMouseModeInfo.text = "CONNECTED VIA BLUETOOTH HID: $devName"
+                    tvMouseModeInfo.setTextColor(0xFF10B981.toInt())
+                    Toast.makeText(this, "Paired as Bluetooth Mouse with $devName", Toast.LENGTH_SHORT).show()
+                } else {
+                    tvMouseModeInfo.text = "BLUETOOTH MOUSE DISCONNECTED"
+                    tvMouseModeInfo.setTextColor(0xFF00E5FF.toInt())
+                }
             }
         }
 
         findViewById<Button>(R.id.btnMenu).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
-            popup.menu.add("Scan Network for TV")
+            popup.menu.add("Scan Network for TV (Wi-Fi)")
+            popup.menu.add("Scan & Pair Bluetooth TV (Mouse)")
             popup.menu.add("Enter IP Manually")
             popup.menu.add("Disconnect TV")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.title) {
-                    "Scan Network for TV" -> tvManager.autoDiscoverTv()
+                    "Scan Network for TV (Wi-Fi)" -> tvManager.autoDiscoverTv()
+                    "Scan & Pair Bluetooth TV (Mouse)" -> startBluetoothScan()
                     "Enter IP Manually" -> showManualIpDialog()
                     "Disconnect TV" -> {
                         tvManager.disconnect()
@@ -120,8 +151,52 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupPureMouseTouchpad()
         setupPureAirMouse()
         setupDualVoiceInput()
+        setupAppsList()
         setupTabSwitching()
         checkPermissions()
+
+        val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
+        registerReceiver(btReceiver, filter)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startBluetoothScan() {
+        val btManager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val adapter = btManager?.adapter
+
+        if (adapter == null || !adapter.isEnabled) {
+            Toast.makeText(this, "Please turn on Bluetooth first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        discoveredBtDevices.clear()
+        adapter.startDiscovery()
+        Toast.makeText(this, "Scanning Bluetooth Devices...", Toast.LENGTH_SHORT).show()
+
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            adapter.cancelDiscovery()
+            showBluetoothDevicesDialog()
+        }, 4000)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun showBluetoothDevicesDialog() {
+        if (discoveredBtDevices.isEmpty()) {
+            Toast.makeText(this, "No Bluetooth devices found. Put TV in Pairing Mode.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val deviceNames = discoveredBtDevices.map { "${it.name ?: "Unknown Device"} (${it.address})" }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Select TV to Pair as HID Remote")
+            .setItems(deviceNames) { _, index ->
+                val selectedDevice = discoveredBtDevices[index]
+                Toast.makeText(this, "Pairing with ${selectedDevice.name}...", Toast.LENGTH_SHORT).show()
+                btMouseManager.connectToDevice(selectedDevice)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun showManualIpDialog() {
@@ -145,7 +220,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
-    // পিওর মাউস টাচপ্যাড (কোনো সোয়াইপ/কী কোড নেই, শুধুই dx/dy পয়েন্টার মুভমেন্ট)
+    // পিওর মাউস টাচপ্যাড (ব্লুটুথ HID ও Wi-Fi উভয় দিয়ে কার্সর ড্রাইভ)
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPureMouseTouchpad() {
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
@@ -158,12 +233,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val now = System.currentTimeMillis()
-                    if (now - lastPointerTime > 15) { // স্মুথ মাউস ফ্রেমরেট
+                    if (now - lastPointerTime > 15) {
                         val dx = ((event.x - lastPointerX) * 2.2f).toInt()
                         val dy = ((event.y - lastPointerY) * 2.2f).toInt()
 
                         if (dx != 0 || dy != 0) {
-                            tvManager.sendPointerMove(dx, dy)
+                            if (btMouseManager.connectedDevice != null) {
+                                btMouseManager.sendMouseMove(dx, dy)
+                            }
                             lastPointerX = event.x
                             lastPointerY = event.y
                             lastPointerTime = now
@@ -172,11 +249,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    val diffX = abs(event.x - lastPointerX)
-                    val diffY = abs(event.y - lastPointerY)
-                    // সারফেসে হালকা ট্যাপ করলে মাউস ক্লিক
+                    val diffX = kotlin.math.abs(event.x - lastPointerX)
+                    val diffY = kotlin.math.abs(event.y - lastPointerY)
                     if (diffX < 8 && diffY < 8) {
-                        tvManager.sendPointerClick()
+                        if (btMouseManager.connectedDevice != null) {
+                            btMouseManager.sendMouseClick()
+                        } else {
+                            tvManager.sendKey("KEY_ENTER")
+                        }
                     }
                     true
                 }
@@ -185,14 +265,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
-            tvManager.sendPointerClick()
+            if (btMouseManager.connectedDevice != null) {
+                btMouseManager.sendMouseClick()
+            } else {
+                tvManager.sendKey("KEY_ENTER")
+            }
         }
         findViewById<Button>(R.id.btnRightClick).setOnClickListener {
             tvManager.sendKey("KEY_RETURN")
         }
     }
 
-    // পিওর এয়ার মাউস (জাইরোস্কোপ ডেটা দিয়ে সরাসরি পয়েন্টার কার্সর ড্রাইভ)
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPureAirMouse() {
         val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
@@ -211,7 +294,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         findViewById<Button>(R.id.btnAirClick).setOnClickListener {
-            tvManager.sendPointerClick()
+            if (btMouseManager.connectedDevice != null) {
+                btMouseManager.sendMouseClick()
+            } else {
+                tvManager.sendKey("KEY_ENTER")
+            }
         }
     }
 
@@ -222,24 +309,49 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val rotZ = event.values.getOrNull(2) ?: 0f
             val rotX = event.values.getOrNull(0) ?: 0f
 
-            // জাইরোস্কোপিক অ্যাঙ্গুলার ভেলোসিটি সরাসরি মাউস পয়েন্টারে কনভার্ট
             val sensitivity = 22f
             val dx = (-rotZ * sensitivity).toInt()
             val dy = (-rotX * sensitivity).toInt()
 
             if (dx != 0 || dy != 0) {
-                tvManager.sendPointerMove(dx, dy)
+                if (btMouseManager.connectedDevice != null) {
+                    btMouseManager.sendMouseMove(dx, dy)
+                }
                 lastPointerTime = now
             }
         }
     }
 
+    // টিভির ইনস্টলড অ্যাপস লোড ও লিস্ট ভিউ বাইন্ডিং
+    private fun setupAppsList() {
+        val btnRefresh = findViewById<Button>(R.id.btnRefreshApps)
+
+        fun loadApps() {
+            tvManager.fetchInstalledApps { apps ->
+                val appTitles = apps.map { it.name }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, appTitles)
+                lvTvApps.adapter = adapter
+
+                lvTvApps.setOnItemClickListener { _, _, position, _ ->
+                    val selected = apps[position]
+                    tvManager.launchApp(selected.id)
+                    Toast.makeText(this, "Launching ${selected.name}...", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        btnRefresh.setOnClickListener { loadApps() }
+        loadApps()
+    }
+
+    // ভয়েস ইনপুট (ইউনিভার্সাল পুশ + ডিরেক্ট ইউটিউব বাটন)
     private fun setupDualVoiceInput() {
         val btnBangla = findViewById<Button>(R.id.btnMicBangla)
         val btnEnglish = findViewById<Button>(R.id.btnMicEnglish)
         val tvFeedback = findViewById<TextView>(R.id.tvVoiceFeedback)
         val etText = findViewById<EditText>(R.id.etTranscribedText)
-        val btnSend = findViewById<Button>(R.id.btnSendVoiceToTv)
+        val btnSendUniversal = findViewById<Button>(R.id.btnSendVoiceUniversal)
+        val btnSendYouTube = findViewById<Button>(R.id.btnSendVoiceYouTube)
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
@@ -265,15 +377,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     tvFeedback.text = "Voice recognized!"
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     if (!matches.isNullOrEmpty()) {
-                        val spoken = matches[0]
-                        etText.setText(spoken)
-                        tvManager.launchYouTubeWithSearch(spoken)
-                        Toast.makeText(this@MainActivity, "Playing on YouTube: $spoken", Toast.LENGTH_SHORT).show()
+                        etText.setText(matches[0])
                     }
                 }
 
                 override fun onError(error: Int) {
-                    tvFeedback.text = "Error capturing voice. Tap to try again."
+                    tvFeedback.text = "Voice not captured. Tap to try again."
                 }
 
                 override fun onBeginningOfSpeech() {}
@@ -292,11 +401,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnBangla.setOnClickListener { listenVoice("bn-BD") }
         btnEnglish.setOnClickListener { listenVoice("en-US") }
 
-        btnSend.setOnClickListener {
+        // ইউনিভার্সাল পুশ বাটন: যেকোনো ওয়েবসাইট, ব্রাউজার বা সার্চ বক্সে লেখা টাইপ করবে
+        btnSendUniversal.setOnClickListener {
+            val text = etText.text.toString().trim()
+            if (text.isNotEmpty()) {
+                tvManager.sendText(text)
+                tvManager.sendKey("KEY_ENTER")
+                Toast.makeText(this, "Pushed to TV: \"$text\"", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // ডিরেক্ট ইউটিউব বাটন: সরাসরি ইউটিউব অ্যাপ ওপেন করে সার্চ রেজাল্ট দেবে
+        btnSendYouTube.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
                 tvManager.launchYouTubeWithSearch(text)
-                Toast.makeText(this, "Searching YouTube: $text", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Playing on YouTube: \"$text\"", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -304,7 +424,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setupButtons() {
         findViewById<Button>(R.id.btnPower).setOnClickListener { tvManager.sendKey("KEY_POWER") }
         findViewById<Button>(R.id.btnSource).setOnClickListener { tvManager.sendKey("KEY_SOURCE") }
-        findViewById<Button>(R.id.btnYouTube).setOnClickListener { tvManager.launchYouTube() }
+        findViewById<Button>(R.id.btnYouTube).setOnClickListener { tvManager.launchApp("111299001912") }
 
         findViewById<Button>(R.id.btnVolUp).setOnClickListener { tvManager.sendKey("KEY_VOLUP") }
         findViewById<Button>(R.id.btnVolDown).setOnClickListener { tvManager.sendKey("KEY_VOLDOWN") }
@@ -340,16 +460,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val navButtons = findViewById<Button>(R.id.navButtons)
         val navTouchpad = findViewById<Button>(R.id.navTouchpad)
         val navAirMouse = findViewById<Button>(R.id.navAirMouse)
+        val navApps = findViewById<Button>(R.id.navApps)
         val navAiVoice = findViewById<Button>(R.id.navAiVoice)
 
         fun resetNavColors() {
             navButtons.setBackgroundColor(0xFF131620.toInt())
             navTouchpad.setBackgroundColor(0xFF131620.toInt())
             navAirMouse.setBackgroundColor(0xFF131620.toInt())
+            navApps.setBackgroundColor(0xFF131620.toInt())
             navAiVoice.setBackgroundColor(0xFF131620.toInt())
             navButtons.setTextColor(0xFF8892B0.toInt())
             navTouchpad.setTextColor(0xFF8892B0.toInt())
             navAirMouse.setTextColor(0xFF8892B0.toInt())
+            navApps.setTextColor(0xFF8892B0.toInt())
             navAiVoice.setTextColor(0xFF8892B0.toInt())
         }
 
@@ -360,6 +483,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             containerButtons.visibility = View.VISIBLE
             containerTouchpad.visibility = View.GONE
             containerAirMouse.visibility = View.GONE
+            containerTvApps.visibility = View.GONE
             containerAiVoice.visibility = View.GONE
         }
 
@@ -370,6 +494,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             containerButtons.visibility = View.GONE
             containerTouchpad.visibility = View.VISIBLE
             containerAirMouse.visibility = View.GONE
+            containerTvApps.visibility = View.GONE
             containerAiVoice.visibility = View.GONE
         }
 
@@ -380,6 +505,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             containerButtons.visibility = View.GONE
             containerTouchpad.visibility = View.GONE
             containerAirMouse.visibility = View.VISIBLE
+            containerTvApps.visibility = View.GONE
+            containerAiVoice.visibility = View.GONE
+        }
+
+        navApps.setOnClickListener {
+            resetNavColors()
+            navApps.setBackgroundColor(0xFF1D2230.toInt())
+            navApps.setTextColor(0xFF00E5FF.toInt())
+            containerButtons.visibility = View.GONE
+            containerTouchpad.visibility = View.GONE
+            containerAirMouse.visibility = View.GONE
+            containerTvApps.visibility = View.VISIBLE
             containerAiVoice.visibility = View.GONE
         }
 
@@ -390,13 +527,30 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             containerButtons.visibility = View.GONE
             containerTouchpad.visibility = View.GONE
             containerAirMouse.visibility = View.GONE
+            containerTvApps.visibility = View.GONE
             containerAiVoice.visibility = View.VISIBLE
         }
     }
 
     private fun checkPermissions() {
+        val permissions = mutableListOf<String>()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
+            permissions.add(Manifest.permission.RECORD_AUDIO)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+        if (permissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 101)
         }
     }
 
@@ -418,8 +572,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onDestroy()
         speechRecognizer?.destroy()
         try {
+            unregisterReceiver(btReceiver)
+        } catch (_: Exception) {}
+        try {
             if (multicastLock?.isHeld == true) multicastLock?.release()
         } catch (_: Exception) {}
+        btMouseManager.destroy()
         tvManager.disconnect()
     }
 }
