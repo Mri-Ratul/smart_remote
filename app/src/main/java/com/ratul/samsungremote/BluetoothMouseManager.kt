@@ -8,18 +8,19 @@ import android.os.Looper
 import android.util.Log
 
 @SuppressLint("MissingPermission")
-class BluetoothMouseManager(private val context: Context) {
+class BluetoothHidMouseManager(private val context: Context) {
 
-    private val tag = "BtMouseManager"
+    private val tag = "BtHidMouseManager"
+    private var bluetoothManager: BluetoothManager? = null
     private var bluetoothAdapter: BluetoothAdapter? = null
-    private var hidDeviceApp: BluetoothHidDevice? = null
+    private var hidDevice: BluetoothHidDevice? = null
     var connectedDevice: BluetoothDevice? = null
         private set
 
     var onConnectionChanged: ((Boolean, String) -> Unit)? = null
 
     // Standard USB/Bluetooth HID Mouse Descriptor
-    private val mouseReportDescriptor = byteArrayOf(
+    private val mouseDescriptor = byteArrayOf(
         0x05.toByte(), 0x01.toByte(), // USAGE_PAGE (Generic Desktop)
         0x09.toByte(), 0x02.toByte(), // USAGE (Mouse)
         0xa1.toByte(), 0x01.toByte(), // COLLECTION (Application)
@@ -67,65 +68,60 @@ class BluetoothMouseManager(private val context: Context) {
     private val serviceListener = object : BluetoothProfile.ServiceListener {
         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
             if (profile == BluetoothProfile.HID_DEVICE) {
-                hidDeviceApp = proxy as? BluetoothHidDevice
-                registerApp()
+                hidDevice = proxy as? BluetoothHidDevice
+                registerHidApp()
             }
         }
 
         override fun onServiceDisconnected(profile: Int) {
             if (profile == BluetoothProfile.HID_DEVICE) {
-                hidDeviceApp = null
+                hidDevice = null
             }
         }
     }
 
-    fun init() {
-        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        bluetoothAdapter = manager?.adapter
+    fun initialize() {
+        bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        bluetoothAdapter = bluetoothManager?.adapter
         bluetoothAdapter?.getProfileProxy(context, serviceListener, BluetoothProfile.HID_DEVICE)
     }
 
-    private fun registerApp() {
-        // ফিক্সড: মাউসের জন্য সঠিক সাবক্লাস এবং SDP বাইট
+    private fun registerHidApp() {
+        // 0x02.toByte() হল HID Pointing/Mouse device subclass
         val sdp = BluetoothHidDeviceAppSdpSettings(
             "Samsung Remote Mouse",
             "Universal Smart Remote & Air Mouse",
             "Samsung Remote",
-            BluetoothHidDeviceAppSdpSettings.SUBCLASS2_POINTING,
-            mouseReportDescriptor
+            0x02.toByte(),
+            mouseDescriptor
         )
-        hidDeviceApp?.registerApp(sdp, null, null, context.mainExecutor, callback)
+        hidDevice?.registerApp(sdp, null, null, context.mainExecutor, callback)
     }
 
     fun connectDevice(device: BluetoothDevice) {
-        hidDeviceApp?.connect(device)
+        hidDevice?.connect(device)
     }
 
-    fun sendMouseMovement(dx: Int, dy: Int) {
-        val device = connectedDevice ?: return
+    fun sendMouseMove(dx: Int, dy: Int) {
+        val dev = connectedDevice ?: return
         val clampedX = dx.coerceIn(-127, 127).toByte()
         val clampedY = dy.coerceIn(-127, 127).toByte()
-
         val report = byteArrayOf(0x00, clampedX, clampedY)
-        hidDeviceApp?.sendReport(device, 0, report)
+        hidDevice?.sendReport(dev, 0, report)
     }
 
     fun sendMouseClick() {
-        val device = connectedDevice ?: return
-
-        // Button Down
-        hidDeviceApp?.sendReport(device, 0, byteArrayOf(0x01, 0x00, 0x00))
-
-        // Button Up
+        val dev = connectedDevice ?: return
+        hidDevice?.sendReport(dev, 0, byteArrayOf(0x01, 0x00, 0x00))
         Handler(Looper.getMainLooper()).postDelayed({
-            hidDeviceApp?.sendReport(device, 0, byteArrayOf(0x00, 0x00, 0x00))
+            hidDevice?.sendReport(dev, 0, byteArrayOf(0x00, 0x00, 0x00))
         }, 50)
     }
 
-    fun cleanup() {
+    fun destroy() {
         try {
-            hidDeviceApp?.unregisterApp()
-            bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDeviceApp)
+            hidDevice?.unregisterApp()
+            bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
         } catch (_: Exception) {}
     }
 }
