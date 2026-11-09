@@ -5,42 +5,34 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.coroutines.*
 import kotlin.math.abs
 
-class MainActivity : AppCompatActivity(), SensorEventListener {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var tvManager: SamsungTvManager
     private var speechRecognizer: SpeechRecognizer? = null
 
-    private var sensorManager: SensorManager? = null
-    private var gyroscopeSensor: Sensor? = null
-    private var isAirMouseActive = false
-    private var multicastLock: WifiManager.MulticastLock? = null
-
-    private lateinit var tvStatus: TextView
-    private lateinit var containerButtons: ScrollView
-    private lateinit var containerTouchpad: View
-    private lateinit var containerAirMouse: View
-    private lateinit var containerTvApps: View
-    private lateinit var containerAiVoice: View
-    private lateinit var lvTvApps: ListView
+    private lateinit var tvTvTitle: TextView
+    private lateinit var tvConnectionStatus: TextView
+    private lateinit var containerMainRemote: View
+    private lateinit var containerTouchpadHub: View
+    private lateinit var splashOverlay: View
+    private lateinit var gvAppsList: GridView
 
     private var lastPointerX = 0f
     private var lastPointerY = 0f
@@ -51,56 +43,43 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        try {
-            val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            multicastLock = wifi.createMulticastLock("samsung_remote_lock").apply {
-                setReferenceCounted(true)
-                acquire()
-            }
-        } catch (_: Exception) {}
-
         tvManager = SamsungTvManager(this)
 
-        try {
-            sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-            gyroscopeSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-        } catch (_: Exception) {}
+        tvTvTitle = findViewById(R.id.tvTvTitle)
+        tvConnectionStatus = findViewById(R.id.tvConnectionStatus)
+        containerMainRemote = findViewById(R.id.containerMainRemote)
+        containerTouchpadHub = findViewById(R.id.containerTouchpadHub)
+        splashOverlay = findViewById(R.id.splashOverlay)
+        gvAppsList = findViewById(R.id.gvAppsList)
 
-        tvStatus = findViewById(R.id.tvTvStatus)
-        containerButtons = findViewById(R.id.containerButtons)
-        containerTouchpad = findViewById(R.id.containerTouchpad)
-        containerAirMouse = findViewById(R.id.containerAirMouse)
-        containerTvApps = findViewById(R.id.containerTvApps)
-        containerAiVoice = findViewById(R.id.containerAiVoice)
-        lvTvApps = findViewById(R.id.lvTvApps)
+        // স্প্ল্যাশ স্ক্রিন এনিমেশন ও অটো হাইড
+        CoroutineScope(Dispatchers.Main).launch {
+            delay(1500)
+            splashOverlay.animate().alpha(0f).setDuration(400).withEndAction {
+                splashOverlay.visibility = View.GONE
+            }
+        }
 
         tvManager.onStatusChanged = { status ->
             runOnUiThread {
-                val ip = tvManager.getSavedIp()
-                tvStatus.text = if (ip.isNotEmpty()) "$status ($ip)" else status
+                tvConnectionStatus.text = "● $status"
             }
         }
 
-        findViewById<Button>(R.id.btnMenu).setOnClickListener { view ->
-            val popup = PopupMenu(this, view)
-            popup.menu.add("Scan Network for TV (Wi-Fi)")
-            popup.menu.add("Enter IP Manually")
-            popup.menu.add("Disconnect TV")
-
-            popup.setOnMenuItemClickListener { item ->
-                when (item.title) {
-                    "Scan Network for TV (Wi-Fi)" -> tvManager.autoDiscoverTv()
-                    "Enter IP Manually" -> showManualIpDialog()
-                    "Disconnect TV" -> {
-                        tvManager.disconnect()
-                        tvStatus.text = "Status: Disconnected"
-                    }
-                }
-                true
+        tvManager.onTvDiscovered = { ip ->
+            runOnUiThread {
+                tvTvTitle.text = "[TV] Samsung 4 Series (32)"
+                tvConnectionStatus.text = "● Connected ($ip)"
             }
-            popup.show()
         }
+
+        setupHeaderAndPairing()
+        setupModeSwitcher()
+        setupModernButtons()
+        setupProcessMouseTouchpad()
+        setupBottomMediaControls()
+        setupAppsGrid()
+        checkVoicePermission()
 
         val savedIp = tvManager.getSavedIp()
         if (savedIp.isNotEmpty()) {
@@ -108,14 +87,59 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } else {
             tvManager.autoDiscoverTv()
         }
+    }
 
-        setupButtons()
-        setupWifiTouchpad()
-        setupWifiAirMouse()
-        setupDualVoiceInput()
-        setupAppsList()
-        setupTabSwitching()
-        checkPermissions()
+    private fun setupHeaderAndPairing() {
+        findViewById<ImageButton>(R.id.btnPowerModern).setOnClickListener {
+            tvManager.sendKey(SamsungKeyMap.POWER)
+        }
+
+        findViewById<ImageButton>(R.id.btnPairSheet).setOnClickListener {
+            showPairingBottomSheet()
+        }
+    }
+
+    private fun showPairingBottomSheet() {
+        val dialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_pairing, null, false)
+        dialog.setContentView(view)
+
+        val tvCardTitle = view.findViewById<TextView>(R.id.tvSheetTvName)
+        val tvCardSub = view.findViewById<TextView>(R.id.tvSheetTvIp)
+        val btnSheetConnect = view.findViewById<Button>(R.id.btnSheetConnect)
+        val btnSheetScan = view.findViewById<Button>(R.id.btnSheetScan)
+        val btnSheetManual = view.findViewById<Button>(R.id.btnSheetManual)
+        val btnSheetDisconnect = view.findViewById<Button>(R.id.btnSheetDisconnect)
+
+        val currentIp = tvManager.getSavedIp()
+        if (currentIp.isNotEmpty()) {
+            tvCardTitle.text = "[TV] Samsung 4 Series (32)"
+            tvCardSub.text = "$currentIp • UA32N4300"
+        }
+
+        btnSheetConnect.setOnClickListener {
+            val ip = tvManager.getSavedIp()
+            if (ip.isNotEmpty()) tvManager.connect(ip)
+            dialog.dismiss()
+        }
+
+        btnSheetScan.setOnClickListener {
+            tvManager.autoDiscoverTv()
+            dialog.dismiss()
+        }
+
+        btnSheetManual.setOnClickListener {
+            dialog.dismiss()
+            showManualIpDialog()
+        }
+
+        btnSheetDisconnect.setOnClickListener {
+            tvManager.disconnect()
+            tvConnectionStatus.text = "● Disconnected"
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun showManualIpDialog() {
@@ -127,22 +151,69 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         AlertDialog.Builder(this)
             .setTitle("Enter TV IP Address")
-            .setMessage("Do not add ports or http (just the IP):")
             .setView(input)
             .setPositiveButton("Connect") { _, _ ->
                 val ip = input.text.toString().trim()
-                if (ip.isNotEmpty()) {
-                    tvManager.connect(ip)
-                }
+                if (ip.isNotEmpty()) tvManager.connect(ip)
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    // ওয়াই-ফাই মাউস টাচপ্যাড
+    private fun setupModeSwitcher() {
+        val tabButtons = findViewById<Button>(R.id.tabButtons)
+        val tabTouchpad = findViewById<Button>(R.id.tabTouchpad)
+
+        tabButtons.setOnClickListener {
+            tabButtons.setBackgroundResource(R.drawable.bg_dpad_center)
+            tabButtons.setTextColor(0xFFFFFFFF.toInt())
+            tabTouchpad.setBackgroundResource(android.R.color.transparent)
+            tabTouchpad.setTextColor(0xFF64748B.toInt())
+
+            containerMainRemote.visibility = View.VISIBLE
+            containerTouchpadHub.visibility = View.GONE
+        }
+
+        tabTouchpad.setOnClickListener {
+            tabTouchpad.setBackgroundResource(R.drawable.bg_dpad_center)
+            tabTouchpad.setTextColor(0xFFFFFFFF.toInt())
+            tabButtons.setBackgroundResource(android.R.color.transparent)
+            tabButtons.setTextColor(0xFF64748B.toInt())
+
+            containerMainRemote.visibility = View.GONE
+            containerTouchpadHub.visibility = View.VISIBLE
+            loadAppsIntoGrid()
+        }
+    }
+
+    private fun setupModernButtons() {
+        // Channel
+        findViewById<Button>(R.id.btnChUpMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.CH_UP) }
+        findViewById<Button>(R.id.btnChDownMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.CH_DOWN) }
+
+        // Volume
+        findViewById<Button>(R.id.btnVolUpMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.VOL_UP) }
+        findViewById<Button>(R.id.btnVolDownMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.VOL_DOWN) }
+
+        // D-Pad
+        findViewById<Button>(R.id.btnDpadUp).setOnClickListener { tvManager.sendKey(SamsungKeyMap.UP) }
+        findViewById<Button>(R.id.btnDpadDown).setOnClickListener { tvManager.sendKey(SamsungKeyMap.DOWN) }
+        findViewById<Button>(R.id.btnDpadLeft).setOnClickListener { tvManager.sendKey(SamsungKeyMap.LEFT) }
+        findViewById<Button>(R.id.btnDpadRight).setOnClickListener { tvManager.sendKey(SamsungKeyMap.RIGHT) }
+        findViewById<Button>(R.id.btnDpadOk).setOnClickListener { tvManager.sendKey(SamsungKeyMap.ENTER) }
+
+        // Dock Buttons
+        findViewById<ImageButton>(R.id.btnBackMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.RETURN) }
+        findViewById<ImageButton>(R.id.btnHomeMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.HOME) }
+        findViewById<ImageButton>(R.id.btnSettingsMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.SETTINGS) }
+
+        findViewById<Button>(R.id.btnNumpadTrigger).setOnClickListener { showNumpadDialog() }
+        findViewById<ImageButton>(R.id.btnVoiceKeyboardTrigger).setOnClickListener { showVoiceInputDialog() }
+    }
+
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupWifiTouchpad() {
-        val mouseSurface = findViewById<View>(R.id.mouseSurface)
+    private fun setupProcessMouseTouchpad() {
+        val mouseSurface = findViewById<View>(R.id.modernMouseSurface)
         mouseSurface.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -153,8 +224,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 MotionEvent.ACTION_MOVE -> {
                     val now = System.currentTimeMillis()
                     if (now - lastPointerTime > 16) {
-                        val dx = ((event.x - lastPointerX) * 2.0f).toInt()
-                        val dy = ((event.y - lastPointerY) * 2.0f).toInt()
+                        val dx = ((event.x - lastPointerX) * 2.2f).toInt()
+                        val dy = ((event.y - lastPointerY) * 2.2f).toInt()
 
                         if (dx != 0 || dy != 0) {
                             tvManager.sendWifiMouseMove(dx, dy)
@@ -168,7 +239,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 MotionEvent.ACTION_UP -> {
                     val diffX = abs(event.x - lastPointerX)
                     val diffY = abs(event.y - lastPointerY)
-                    if (diffX < 8 && diffY < 8) {
+                    if (diffX < 10 && diffY < 10) {
                         tvManager.sendWifiMouseClick()
                     }
                     true
@@ -177,288 +248,138 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
-        findViewById<Button>(R.id.btnLeftClick).setOnClickListener {
-            tvManager.sendWifiMouseClick()
-        }
-        findViewById<Button>(R.id.btnRightClick).setOnClickListener {
-            tvManager.sendKey("KEY_RETURN")
-        }
-    }
-
-    // ওয়াই-ফাই এয়ার মাউস
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupWifiAirMouse() {
-        val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
-        btnAirTrigger.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    isAirMouseActive = true
-                    true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    isAirMouseActive = false
-                    true
-                }
-                else -> false
-            }
-        }
-
-        findViewById<Button>(R.id.btnAirClick).setOnClickListener {
+        findViewById<Button>(R.id.btnTouchpadLeftClick).setOnClickListener {
             tvManager.sendWifiMouseClick()
         }
     }
 
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event == null || !isAirMouseActive) return
-        val now = System.currentTimeMillis()
-        if (now - lastPointerTime > 20) {
-            val rotZ = event.values.getOrNull(2) ?: 0f
-            val rotX = event.values.getOrNull(0) ?: 0f
+    private fun setupBottomMediaControls() {
+        findViewById<ImageButton>(R.id.btnRewindMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.REWIND) }
+        findViewById<ImageButton>(R.id.btnPlayMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.PLAY) }
+        findViewById<ImageButton>(R.id.btnPauseMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.PAUSE) }
+        findViewById<ImageButton>(R.id.btnFastForwardMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.FAST_FORWARD) }
 
-            val sensitivity = 20f
-            val dx = (-rotZ * sensitivity).toInt()
-            val dy = (-rotX * sensitivity).toInt()
-
-            if (dx != 0 || dy != 0) {
-                tvManager.sendWifiMouseMove(dx, dy)
-                lastPointerTime = now
+        // কাস্টম সাউন্ড জাম্প: অ্যাকশন সিনে ৮০ থেকে সরাসরি ৫০-এ নামানো
+        findViewById<Button>(R.id.btnCustomSoundShift).setOnClickListener {
+            Toast.makeText(this, "Quick Sound Shift: Moving to Comfort Volume", Toast.LENGTH_SHORT).show()
+            CoroutineScope(Dispatchers.IO).launch {
+                repeat(30) {
+                    tvManager.sendKey(SamsungKeyMap.VOL_DOWN)
+                    delay(40)
+                }
             }
         }
     }
 
-    private fun setupAppsList() {
-        val btnRefresh = findViewById<Button>(R.id.btnRefreshApps)
-
-        fun loadApps() {
-            tvManager.fetchInstalledApps { apps ->
-                val appTitles = apps.map { it.name }
-                val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, appTitles)
-                lvTvApps.adapter = adapter
-
-                lvTvApps.setOnItemClickListener { _, _, position, _ ->
-                    val selected = apps[position]
-                    tvManager.launchApp(selected.id)
-                    Toast.makeText(this, "Launching ${selected.name}...", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        btnRefresh.setOnClickListener { loadApps() }
-        loadApps()
+    private fun setupAppsGrid() {
+        loadAppsIntoGrid()
     }
 
-    private fun setupDualVoiceInput() {
-        val btnBangla = findViewById<Button>(R.id.btnMicBangla)
-        val btnEnglish = findViewById<Button>(R.id.btnMicEnglish)
-        val tvFeedback = findViewById<TextView>(R.id.tvVoiceFeedback)
-        val etText = findViewById<EditText>(R.id.etTranscribedText)
-        val btnSendUniversal = findViewById<Button>(R.id.btnSendVoiceUniversal)
-        val btnSendYouTube = findViewById<Button>(R.id.btnSendVoiceYouTube)
-
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-
-        fun listenVoice(langCode: String) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 202)
-                return
-            }
-
-            val speechIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, langCode)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, langCode)
-                putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, langCode)
-            }
-
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    tvFeedback.text = if (langCode == "bn-BD") "বাংলা শুনছি... বলুন" else "Listening in English... Speak"
-                }
-
-                override fun onResults(results: Bundle?) {
-                    tvFeedback.text = "Voice recognized!"
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        etText.setText(matches[0])
+    private fun loadAppsIntoGrid() {
+        tvManager.fetchInstalledApps { apps ->
+            val adapter = object : BaseAdapter() {
+                override fun getCount(): Int = apps.size
+                override fun getItem(position: Int): Any = apps[position]
+                override fun getItemId(position: Int): Long = position.toLong()
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+                    val btn = (convertView as? Button) ?: Button(this@MainActivity).apply {
+                        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 80)
+                        setBackgroundResource(R.drawable.bg_neumorphic_card)
+                        setTextColor(0xFF1E293B.toInt())
+                        textSize = 10sp
+                        setPadding(4, 4, 4, 4)
                     }
+                    val item = apps[position]
+                    btn.text = item.name
+                    btn.setOnClickListener {
+                        tvManager.launchApp(item.id)
+                        Toast.makeText(this@MainActivity, "Opening ${item.name}...", Toast.LENGTH_SHORT).show()
+                    }
+                    return btn
                 }
-
-                override fun onError(error: Int) {
-                    tvFeedback.text = "Voice not captured. Tap to try again."
-                }
-
-                override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {
-                    tvFeedback.text = "Processing..."
-                }
-                override fun onPartialResults(partialResults: Bundle?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
-
-            speechRecognizer?.startListening(speechIntent)
+            }
+            gvAppsList.adapter = adapter
         }
+    }
 
-        btnBangla.setOnClickListener { listenVoice("bn-BD") }
-        btnEnglish.setOnClickListener { listenVoice("en-US") }
+    private fun showNumpadDialog() {
+        val numKeys = arrayOf(
+            SamsungKeyMap.NUM_1, SamsungKeyMap.NUM_2, SamsungKeyMap.NUM_3,
+            SamsungKeyMap.NUM_4, SamsungKeyMap.NUM_5, SamsungKeyMap.NUM_6,
+            SamsungKeyMap.NUM_7, SamsungKeyMap.NUM_8, SamsungKeyMap.NUM_9,
+            SamsungKeyMap.TTX_MIX, SamsungKeyMap.NUM_0, SamsungKeyMap.PRE_CH
+        )
+        val labels = arrayOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "TTX", "0", "PRE-CH")
 
-        // অতিরিক্ত এন্টার ছাড়া শুধু টেক্সট পুশ
-        btnSendUniversal.setOnClickListener {
+        AlertDialog.Builder(this)
+            .setTitle("Number Keypad")
+            .setItems(labels) { _, which ->
+                tvManager.sendKey(numKeys[which])
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun showVoiceInputDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_voice_input, null)
+        val etText = dialogView.findViewById<EditText>(R.id.etDialogVoiceText)
+        val btnBn = dialogView.findViewById<Button>(R.id.btnDialogBn)
+        val btnEn = dialogView.findViewById<Button>(R.id.btnDialogEn)
+        val btnSend = dialogView.findViewById<Button>(R.id.btnDialogSend)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnBn.setOnClickListener { startListening(etText, "bn-BD") }
+        btnEn.setOnClickListener { startListening(etText, "en-US") }
+
+        btnSend.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
                 tvManager.sendText(text)
-                Toast.makeText(this, "Pushed: \"$text\"", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
             }
         }
 
-        // ইউটিউব সার্চ
-        btnSendYouTube.setOnClickListener {
-            val text = etText.text.toString().trim()
-            if (text.isNotEmpty()) {
-                tvManager.launchYouTubeWithSearch(text)
-                Toast.makeText(this, "Searching YouTube: \"$text\"", Toast.LENGTH_SHORT).show()
+        dialog.show()
+    }
+
+    private fun startListening(target: EditText, lang: String) {
+        speechRecognizer?.destroy()
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+        }
+
+        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onResults(results: Bundle?) {
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) target.setText(matches[0])
             }
-        }
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onError(error: Int) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+        speechRecognizer?.startListening(intent)
     }
 
-    private fun setupButtons() {
-        findViewById<Button>(R.id.btnPower).setOnClickListener { tvManager.sendKey("KEY_POWER") }
-        findViewById<Button>(R.id.btnSource).setOnClickListener { tvManager.sendKey("KEY_SOURCE") }
-        findViewById<Button>(R.id.btnYouTube).setOnClickListener { tvManager.launchApp("111299001912") }
-
-        findViewById<Button>(R.id.btnVolUp).setOnClickListener { tvManager.sendKey("KEY_VOLUP") }
-        findViewById<Button>(R.id.btnVolDown).setOnClickListener { tvManager.sendKey("KEY_VOLDOWN") }
-        findViewById<Button>(R.id.btnMute).setOnClickListener { tvManager.sendKey("KEY_MUTE") }
-        findViewById<Button>(R.id.btnChList).setOnClickListener { tvManager.sendKey("KEY_CHLIST") }
-        findViewById<Button>(R.id.btnChUp).setOnClickListener { tvManager.sendKey("KEY_CHUP") }
-        findViewById<Button>(R.id.btnChDown).setOnClickListener { tvManager.sendKey("KEY_CHDOWN") }
-
-        findViewById<Button>(R.id.btnSettings).setOnClickListener { tvManager.sendKey("KEY_MENU") }
-        findViewById<Button>(R.id.btnHome).setOnClickListener { tvManager.sendKey("KEY_HOME") }
-
-        findViewById<Button>(R.id.btnUp).setOnClickListener { tvManager.sendKey("KEY_UP") }
-        findViewById<Button>(R.id.btnDown).setOnClickListener { tvManager.sendKey("KEY_DOWN") }
-        findViewById<Button>(R.id.btnLeft).setOnClickListener { tvManager.sendKey("KEY_LEFT") }
-        findViewById<Button>(R.id.btnRight).setOnClickListener { tvManager.sendKey("KEY_RIGHT") }
-        findViewById<Button>(R.id.btnEnter).setOnClickListener { tvManager.sendKey("KEY_ENTER") }
-
-        findViewById<Button>(R.id.btnReturn).setOnClickListener { tvManager.sendKey("KEY_RETURN") }
-        findViewById<Button>(R.id.btnExit).setOnClickListener { tvManager.sendKey("KEY_EXIT") }
-
-        findViewById<Button>(R.id.btnPicture).setOnClickListener { tvManager.cyclePictureMode() }
-        findViewById<Button>(R.id.btnPicSize).setOnClickListener { tvManager.togglePicSize() }
-        findViewById<Button>(R.id.btnAdSubt).setOnClickListener { tvManager.toggleSubtitle() }
-
-        findViewById<Button>(R.id.btnStop).setOnClickListener { tvManager.sendKey("KEY_STOP") }
-        findViewById<Button>(R.id.btnRewind).setOnClickListener { tvManager.sendKey("KEY_REWIND") }
-        findViewById<Button>(R.id.btnPlay).setOnClickListener { tvManager.sendKey("KEY_PLAY") }
-        findViewById<Button>(R.id.btnPause).setOnClickListener { tvManager.sendKey("KEY_PAUSE") }
-        findViewById<Button>(R.id.btnFastForward).setOnClickListener { tvManager.sendKey("KEY_FF") }
-    }
-
-    private fun setupTabSwitching() {
-        val navButtons = findViewById<Button>(R.id.navButtons)
-        val navTouchpad = findViewById<Button>(R.id.navTouchpad)
-        val navAirMouse = findViewById<Button>(R.id.navAirMouse)
-        val navApps = findViewById<Button>(R.id.navApps)
-        val navAiVoice = findViewById<Button>(R.id.navAiVoice)
-
-        fun resetNavColors() {
-            navButtons.setBackgroundColor(0xFF131620.toInt())
-            navTouchpad.setBackgroundColor(0xFF131620.toInt())
-            navAirMouse.setBackgroundColor(0xFF131620.toInt())
-            navApps.setBackgroundColor(0xFF131620.toInt())
-            navAiVoice.setBackgroundColor(0xFF131620.toInt())
-            navButtons.setTextColor(0xFF8892B0.toInt())
-            navTouchpad.setTextColor(0xFF8892B0.toInt())
-            navAirMouse.setTextColor(0xFF8892B0.toInt())
-            navApps.setTextColor(0xFF8892B0.toInt())
-            navAiVoice.setTextColor(0xFF8892B0.toInt())
-        }
-
-        navButtons.setOnClickListener {
-            resetNavColors()
-            navButtons.setBackgroundColor(0xFF1D2230.toInt())
-            navButtons.setTextColor(0xFF00E5FF.toInt())
-            containerButtons.visibility = View.VISIBLE
-            containerTouchpad.visibility = View.GONE
-            containerAirMouse.visibility = View.GONE
-            containerTvApps.visibility = View.GONE
-            containerAiVoice.visibility = View.GONE
-        }
-
-        navTouchpad.setOnClickListener {
-            resetNavColors()
-            navTouchpad.setBackgroundColor(0xFF1D2230.toInt())
-            navTouchpad.setTextColor(0xFF00E5FF.toInt())
-            containerButtons.visibility = View.GONE
-            containerTouchpad.visibility = View.VISIBLE
-            containerAirMouse.visibility = View.GONE
-            containerTvApps.visibility = View.GONE
-            containerAiVoice.visibility = View.GONE
-        }
-
-        navAirMouse.setOnClickListener {
-            resetNavColors()
-            navAirMouse.setBackgroundColor(0xFF1D2230.toInt())
-            navAirMouse.setTextColor(0xFF00E5FF.toInt())
-            containerButtons.visibility = View.GONE
-            containerTouchpad.visibility = View.GONE
-            containerAirMouse.visibility = View.VISIBLE
-            containerTvApps.visibility = View.GONE
-            containerAiVoice.visibility = View.GONE
-        }
-
-        navApps.setOnClickListener {
-            resetNavColors()
-            navApps.setBackgroundColor(0xFF1D2230.toInt())
-            navApps.setTextColor(0xFF00E5FF.toInt())
-            containerButtons.visibility = View.GONE
-            containerTouchpad.visibility = View.GONE
-            containerAirMouse.visibility = View.GONE
-            containerTvApps.visibility = View.VISIBLE
-            containerAiVoice.visibility = View.GONE
-        }
-
-        navAiVoice.setOnClickListener {
-            resetNavColors()
-            navAiVoice.setBackgroundColor(0xFF1D2230.toInt())
-            navAiVoice.setTextColor(0xFF00E5FF.toInt())
-            containerButtons.visibility = View.GONE
-            containerTouchpad.visibility = View.GONE
-            containerAirMouse.visibility = View.GONE
-            containerTvApps.visibility = View.GONE
-            containerAiVoice.visibility = View.VISIBLE
-        }
-    }
-
-    private fun checkPermissions() {
+    private fun checkVoicePermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        gyroscopeSensor?.let {
-            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        sensorManager?.unregisterListener(this)
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
     override fun onDestroy() {
         super.onDestroy()
         speechRecognizer?.destroy()
-        try {
-            if (multicastLock?.isHeld == true) multicastLock?.release()
-        } catch (_: Exception) {}
         tvManager.disconnect()
     }
 }
