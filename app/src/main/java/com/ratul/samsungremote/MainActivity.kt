@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .show()
     }
 
-    // ওয়াই-ফাই মাউস টাচপ্যাড (স্যামসাং ব্রাউজারের জন্য)
+    // ওয়াই-ফাই মাউস টাচপ্যাড
     @SuppressLint("ClickableViewAccessibility")
     private fun setupWifiTouchpad() {
         val mouseSurface = findViewById<View>(R.id.mouseSurface)
@@ -185,7 +185,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // ওয়াই-ফাই এয়ার মাউস (জাইরোস্কোপ দিয়ে ওয়াই-ফাই মাউস প্যাকেট পাঠানো)
+    // ওয়াই-ফাই এয়ার মাউস
     @SuppressLint("ClickableViewAccessibility")
     private fun setupWifiAirMouse() {
         val btnAirTrigger = findViewById<Button>(R.id.btnAirTrigger)
@@ -303,7 +303,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnBangla.setOnClickListener { listenVoice("bn-BD") }
         btnEnglish.setOnClickListener { listenVoice("en-US") }
 
-        // অতিরিক্ত কোনো এন্টার/কী প্রেস ছাড়া শুধু টেক্সট পুশ
+        // অতিরিক্ত এন্টার ছাড়া শুধু টেক্সট পুশ
         btnSendUniversal.setOnClickListener {
             val text = etText.text.toString().trim()
             if (text.isNotEmpty()) {
