@@ -12,7 +12,6 @@ import android.speech.SpeechRecognizer
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -22,7 +21,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.*
 import kotlin.math.abs
 
-// সেলফ-কন্টেইন্ড স্যামসাং কি-ম্যাপ (কোনো এক্সটার্নাল ফাইলের দরকার নেই)
 object SamsungKeyMap {
     const val POWER = "KEY_POWER"
     const val SOURCE = "KEY_SOURCE"
@@ -58,6 +56,7 @@ object SamsungKeyMap {
     const val REWIND = "KEY_REWIND"
     const val PLAY = "KEY_PLAY"
     const val PAUSE = "KEY_PAUSE"
+    const val STOP = "KEY_STOP"
     const val FAST_FORWARD = "KEY_FF"
 }
 
@@ -71,7 +70,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var containerMainRemote: View
     private lateinit var containerTouchpadHub: View
     private lateinit var splashOverlay: View
-    private lateinit var gvAppsList: GridView
+    private lateinit var llAppsContainer: LinearLayout
 
     private var lastPointerX = 0f
     private var lastPointerY = 0f
@@ -89,11 +88,11 @@ class MainActivity : AppCompatActivity() {
         containerMainRemote = findViewById(R.id.containerMainRemote)
         containerTouchpadHub = findViewById(R.id.containerTouchpadHub)
         splashOverlay = findViewById(R.id.splashOverlay)
-        gvAppsList = findViewById(R.id.gvAppsList)
+        llAppsContainer = findViewById(R.id.llAppsContainer)
 
-        // স্প্ল্যাশ স্ক্রিন অটো হাইড
+        // স্প্ল্যাশ এনিমেশন
         CoroutineScope(Dispatchers.Main).launch {
-            delay(1500)
+            delay(1600)
             splashOverlay.animate().alpha(0f).setDuration(400).withEndAction {
                 splashOverlay.visibility = View.GONE
             }
@@ -101,23 +100,23 @@ class MainActivity : AppCompatActivity() {
 
         tvManager.onStatusChanged = { status ->
             runOnUiThread {
-                tvConnectionStatus.text = "● $status"
+                tvConnectionStatus.text = status
             }
         }
 
         tvManager.onTvDiscovered = { ip ->
             runOnUiThread {
-                tvTvTitle.text = "[TV] Samsung 4 Series (32)"
-                tvConnectionStatus.text = "● Connected ($ip)"
+                tvTvTitle.text = "● [TV] Samsung 4 Series (32)"
+                tvConnectionStatus.text = "Connected ($ip)"
             }
         }
 
         setupHeaderAndPairing()
         setupModeSwitcher()
-        setupModernButtons()
+        setupButtons()
         setupProcessMouseTouchpad()
-        setupBottomMediaControls()
-        setupAppsGrid()
+        setupMediaControls()
+        loadInstalledApps()
         checkVoicePermission()
 
         val savedIp = tvManager.getSavedIp()
@@ -129,11 +128,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupHeaderAndPairing() {
-        findViewById<ImageButton>(R.id.btnPowerModern).setOnClickListener {
+        findViewById<Button>(R.id.btnPowerModern).setOnClickListener {
             tvManager.sendKey(SamsungKeyMap.POWER)
         }
-
-        findViewById<ImageButton>(R.id.btnPairSheet).setOnClickListener {
+        findViewById<Button>(R.id.btnSettingsMod).setOnClickListener {
+            tvManager.sendKey(SamsungKeyMap.SETTINGS)
+        }
+        findViewById<Button>(R.id.btnExitMod).setOnClickListener {
+            tvManager.sendKey(SamsungKeyMap.EXIT)
+        }
+        findViewById<Button>(R.id.btnPairSheet).setOnClickListener {
             showPairingBottomSheet()
         }
     }
@@ -174,7 +178,7 @@ class MainActivity : AppCompatActivity() {
 
         btnSheetDisconnect.setOnClickListener {
             tvManager.disconnect()
-            tvConnectionStatus.text = "● Disconnected"
+            tvConnectionStatus.text = "Disconnected"
             dialog.dismiss()
         }
 
@@ -221,33 +225,27 @@ class MainActivity : AppCompatActivity() {
 
             containerMainRemote.visibility = View.GONE
             containerTouchpadHub.visibility = View.VISIBLE
-            loadAppsIntoGrid()
         }
     }
 
-    private fun setupModernButtons() {
-        // Channel
+    private fun setupButtons() {
         findViewById<Button>(R.id.btnChUpMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.CH_UP) }
         findViewById<Button>(R.id.btnChDownMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.CH_DOWN) }
-
-        // Volume
         findViewById<Button>(R.id.btnVolUpMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.VOL_UP) }
         findViewById<Button>(R.id.btnVolDownMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.VOL_DOWN) }
 
-        // D-Pad
         findViewById<Button>(R.id.btnDpadUp).setOnClickListener { tvManager.sendKey(SamsungKeyMap.UP) }
         findViewById<Button>(R.id.btnDpadDown).setOnClickListener { tvManager.sendKey(SamsungKeyMap.DOWN) }
         findViewById<Button>(R.id.btnDpadLeft).setOnClickListener { tvManager.sendKey(SamsungKeyMap.LEFT) }
         findViewById<Button>(R.id.btnDpadRight).setOnClickListener { tvManager.sendKey(SamsungKeyMap.RIGHT) }
         findViewById<Button>(R.id.btnDpadOk).setOnClickListener { tvManager.sendKey(SamsungKeyMap.ENTER) }
 
-        // Dock
-        findViewById<ImageButton>(R.id.btnBackMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.RETURN) }
-        findViewById<ImageButton>(R.id.btnHomeMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.HOME) }
-        findViewById<ImageButton>(R.id.btnSettingsMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.SETTINGS) }
+        findViewById<Button>(R.id.btnBackMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.RETURN) }
+        findViewById<Button>(R.id.btnHomeMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.HOME) }
+        findViewById<Button>(R.id.btnQuickMenuMod).setOnClickListener { tvManager.sendKey("KEY_TOOLS") }
 
         findViewById<Button>(R.id.btnNumpadTrigger).setOnClickListener { showNumpadDialog() }
-        findViewById<ImageButton>(R.id.btnVoiceKeyboardTrigger).setOnClickListener { showVoiceInputDialog() }
+        findViewById<Button>(R.id.btnVoiceKeyboardTrigger).setOnClickListener { showVoiceInputDialog() }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -292,52 +290,71 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupBottomMediaControls() {
-        findViewById<ImageButton>(R.id.btnRewindMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.REWIND) }
-        findViewById<ImageButton>(R.id.btnPlayMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.PLAY) }
-        findViewById<ImageButton>(R.id.btnPauseMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.PAUSE) }
-        findViewById<ImageButton>(R.id.btnFastForwardMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.FAST_FORWARD) }
+    private fun setupMediaControls() {
+        findViewById<Button>(R.id.btnRewindMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.REWIND) }
+        findViewById<Button>(R.id.btnPlayMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.PLAY) }
+        findViewById<Button>(R.id.btnPauseMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.PAUSE) }
+        findViewById<Button>(R.id.btnStopMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.STOP) }
+        findViewById<Button>(R.id.btnFastForwardMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.FAST_FORWARD) }
 
-        // 80 to 50 volume jump
+        // Action Scene Volume Drop: ৮০ থেকে ৫০-এ নামানো
         findViewById<Button>(R.id.btnCustomSoundShift).setOnClickListener {
-            Toast.makeText(this, "Quick Sound Shift: Moving to Comfort Volume", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Action Scene: Dropping volume to 50", Toast.LENGTH_SHORT).show()
             CoroutineScope(Dispatchers.IO).launch {
                 repeat(30) {
                     tvManager.sendKey(SamsungKeyMap.VOL_DOWN)
-                    delay(40)
+                    delay(35)
                 }
             }
         }
     }
 
-    private fun setupAppsGrid() {
-        loadAppsIntoGrid()
-    }
-
-    private fun loadAppsIntoGrid() {
+    private fun loadInstalledApps() {
         tvManager.fetchInstalledApps { apps ->
-            val adapter = object : BaseAdapter() {
-                override fun getCount(): Int = apps.size
-                override fun getItem(position: Int): Any = apps[position]
-                override fun getItemId(position: Int): Long = position.toLong()
-                override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-                    val btn = (convertView as? Button) ?: Button(this@MainActivity).apply {
-                        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 80)
-                        setBackgroundResource(R.drawable.bg_neumorphic_card)
-                        setTextColor(0xFF1E293B.toInt())
-                        textSize = 10f
-                        setPadding(4, 4, 4, 4)
+            llAppsContainer.removeAllViews()
+            for (app in apps) {
+                val appCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(180, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(8, 0, 8, 0)
                     }
-                    val item = apps[position]
-                    btn.text = item.name
-                    btn.setOnClickListener {
-                        tvManager.launchApp(item.id)
-                        Toast.makeText(this@MainActivity, "Opening ${item.name}...", Toast.LENGTH_SHORT).show()
-                    }
-                    return btn
+                    setPadding(10, 10, 10, 10)
+                    setBackgroundResource(R.drawable.bg_neumorphic_card)
+                    elevation = 4f
                 }
+
+                val appBtn = Button(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110)
+                    setBackgroundResource(R.drawable.bg_dpad_center)
+                    text = when {
+                        app.name.contains("YouTube", true) -> "▶"
+                        app.name.contains("Netflix", true) -> "N"
+                        app.name.contains("Prime", true) -> "prime"
+                        app.name.contains("Browser", true) -> "🌐"
+                        else -> "📺"
+                    }
+                    setTextColor(0xFFFFFFFF.toInt())
+                    textSize = 18f
+                    setOnClickListener {
+                        tvManager.launchApp(app.id)
+                        Toast.makeText(this@MainActivity, "Launching ${app.name}...", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                val appTitle = TextView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    text = app.name
+                    textSize = 10f
+                    setTextColor(0xFF1E293B.toInt())
+                    textAlignment = View.TEXT_ALIGNMENT_CENTER
+                    maxLines = 1
+                    setPadding(0, 6, 0, 0)
+                }
+
+                appCard.addView(appBtn)
+                appCard.addView(appTitle)
+                llAppsContainer.addView(appCard)
             }
-            gvAppsList.adapter = adapter
         }
     }
 
@@ -351,11 +368,11 @@ class MainActivity : AppCompatActivity() {
         val labels = arrayOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "TTX", "0", "PRE-CH")
 
         AlertDialog.Builder(this)
-            .setTitle("Number Keypad")
+            .setTitle("Number Pad")
             .setItems(labels) { _, which ->
                 tvManager.sendKey(numKeys[which])
             }
-            .setNegativeButton("Close", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
