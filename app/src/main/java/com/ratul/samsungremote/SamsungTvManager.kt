@@ -218,6 +218,58 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
+    // ওয়াই-ফাই দিয়ে ব্রাউজারে মাউস কার্সর মুভমেন্ট
+    fun sendWifiMouseMove(dx: Int, dy: Int) {
+        if (!isConnected || webSocket == null) return
+
+        // মেথড ১: Tizen Web Browser Pointer Event
+        val pointerPayload = JSONObject().apply {
+            put("method", "ms.remote.control")
+            put("params", JSONObject().apply {
+                put("Cmd", "Move")
+                put("Position", JSONObject().apply {
+                    put("x", dx)
+                    put("y", dy)
+                })
+                put("TypeOfRemote", "SendPointerEvent")
+            })
+        }
+        webSocket?.send(pointerPayload.toString())
+
+        // মেথড ২: Tizen Touchpad Event
+        val touchPayload = JSONObject().apply {
+            put("method", "ms.remote.touchpad")
+            put("params", JSONObject().apply {
+                put("event", "move")
+                put("x", dx)
+                put("y", dy)
+            })
+        }
+        webSocket?.send(touchPayload.toString())
+    }
+
+    // ওয়াই-ফাই দিয়ে ব্রাউজারে মাউস ক্লিক
+    fun sendWifiMouseClick() {
+        if (!isConnected || webSocket == null) return
+
+        val clickPayload = JSONObject().apply {
+            put("method", "ms.remote.control")
+            put("params", JSONObject().apply {
+                put("Cmd", "LeftClick")
+                put("TypeOfRemote", "SendPointerEvent")
+            })
+        }
+        webSocket?.send(clickPayload.toString())
+
+        val touchClick = JSONObject().apply {
+            put("method", "ms.remote.touchpad")
+            put("params", JSONObject().apply {
+                put("event", "click")
+            })
+        }
+        webSocket?.send(touchClick.toString())
+    }
+
     fun cyclePictureMode() {
         sendKey("KEY_PICTURE_MODE")
         sendKey("KEY_PMODE")
@@ -281,10 +333,10 @@ class SamsungTvManager(private val context: Context) {
             } catch (_: Exception) {}
 
             if (appsList.isEmpty()) {
+                appsList.add(TvAppItem("org.tizen.browser", "Internet Web Browser"))
                 appsList.add(TvAppItem("111299001912", "YouTube"))
                 appsList.add(TvAppItem("3201512006785", "Netflix"))
                 appsList.add(TvAppItem("3201512006963", "Amazon Prime Video"))
-                appsList.add(TvAppItem("org.tizen.browser", "Internet Web Browser"))
                 appsList.add(TvAppItem("11101200001", "Facebook Watch"))
             }
 
@@ -329,7 +381,6 @@ class SamsungTvManager(private val context: Context) {
                 launchApp("111299001912")
                 delay(1200)
                 sendText(query)
-                sendKey("KEY_ENTER")
             }
         }
     }
