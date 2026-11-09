@@ -22,6 +22,45 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.*
 import kotlin.math.abs
 
+// সেলফ-কন্টেইন্ড স্যামসাং কি-ম্যাপ (কোনো এক্সটার্নাল ফাইলের দরকার নেই)
+object SamsungKeyMap {
+    const val POWER = "KEY_POWER"
+    const val SOURCE = "KEY_SOURCE"
+    const val NUM_0 = "KEY_0"
+    const val NUM_1 = "KEY_1"
+    const val NUM_2 = "KEY_2"
+    const val NUM_3 = "KEY_3"
+    const val NUM_4 = "KEY_4"
+    const val NUM_5 = "KEY_5"
+    const val NUM_6 = "KEY_6"
+    const val NUM_7 = "KEY_7"
+    const val NUM_8 = "KEY_8"
+    const val NUM_9 = "KEY_9"
+    const val TTX_MIX = "KEY_TTX_MIX"
+    const val PRE_CH = "KEY_PRECH"
+    const val VOL_UP = "KEY_VOLUP"
+    const val VOL_DOWN = "KEY_VOLDOWN"
+    const val MUTE = "KEY_MUTE"
+    const val CH_LIST = "KEY_CHLIST"
+    const val CH_UP = "KEY_CHUP"
+    const val CH_DOWN = "KEY_CHDOWN"
+    const val SETTINGS = "KEY_MENU"
+    const val HOME = "KEY_HOME"
+    const val GUIDE = "KEY_GUIDE"
+    const val INFO = "KEY_INFO"
+    const val UP = "KEY_UP"
+    const val DOWN = "KEY_DOWN"
+    const val LEFT = "KEY_LEFT"
+    const val RIGHT = "KEY_RIGHT"
+    const val ENTER = "KEY_ENTER"
+    const val RETURN = "KEY_RETURN"
+    const val EXIT = "KEY_EXIT"
+    const val REWIND = "KEY_REWIND"
+    const val PLAY = "KEY_PLAY"
+    const val PAUSE = "KEY_PAUSE"
+    const val FAST_FORWARD = "KEY_FF"
+}
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var tvManager: SamsungTvManager
@@ -52,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         splashOverlay = findViewById(R.id.splashOverlay)
         gvAppsList = findViewById(R.id.gvAppsList)
 
-        // স্প্ল্যাশ স্ক্রিন এনিমেশন ও অটো হাইড
+        // স্প্ল্যাশ স্ক্রিন অটো হাইড
         CoroutineScope(Dispatchers.Main).launch {
             delay(1500)
             splashOverlay.animate().alpha(0f).setDuration(400).withEndAction {
@@ -202,7 +241,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnDpadRight).setOnClickListener { tvManager.sendKey(SamsungKeyMap.RIGHT) }
         findViewById<Button>(R.id.btnDpadOk).setOnClickListener { tvManager.sendKey(SamsungKeyMap.ENTER) }
 
-        // Dock Buttons
+        // Dock
         findViewById<ImageButton>(R.id.btnBackMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.RETURN) }
         findViewById<ImageButton>(R.id.btnHomeMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.HOME) }
         findViewById<ImageButton>(R.id.btnSettingsMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.SETTINGS) }
@@ -259,7 +298,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnPauseMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.PAUSE) }
         findViewById<ImageButton>(R.id.btnFastForwardMod).setOnClickListener { tvManager.sendKey(SamsungKeyMap.FAST_FORWARD) }
 
-        // কাস্টম সাউন্ড জাম্প: অ্যাকশন সিনে ৮০ থেকে সরাসরি ৫০-এ নামানো
+        // 80 to 50 volume jump
         findViewById<Button>(R.id.btnCustomSoundShift).setOnClickListener {
             Toast.makeText(this, "Quick Sound Shift: Moving to Comfort Volume", Toast.LENGTH_SHORT).show()
             CoroutineScope(Dispatchers.IO).launch {
@@ -286,7 +325,7 @@ class MainActivity : AppCompatActivity() {
                         layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 80)
                         setBackgroundResource(R.drawable.bg_neumorphic_card)
                         setTextColor(0xFF1E293B.toInt())
-                        textSize = 10sp
+                        textSize = 10f
                         setPadding(4, 4, 4, 4)
                     }
                     val item = apps[position]
