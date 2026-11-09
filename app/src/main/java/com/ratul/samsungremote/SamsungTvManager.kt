@@ -218,56 +218,42 @@ class SamsungTvManager(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
-    // ওয়াই-ফাই দিয়ে ব্রাউজারে মাউস কার্সর মুভমেন্ট
+    // ProcessMouseDevice প্রোটোকল দিয়ে ব্রাউজার মাউস মুভমেন্ট
     fun sendWifiMouseMove(dx: Int, dy: Int) {
         if (!isConnected || webSocket == null) return
 
-        // মেথড ১: Tizen Web Browser Pointer Event
-        val pointerPayload = JSONObject().apply {
+        val currentTime = System.currentTimeMillis()
+        val payload = JSONObject().apply {
             put("method", "ms.remote.control")
             put("params", JSONObject().apply {
                 put("Cmd", "Move")
                 put("Position", JSONObject().apply {
                     put("x", dx)
                     put("y", dy)
+                    put("Time", currentTime.toString())
                 })
-                put("TypeOfRemote", "SendPointerEvent")
+                put("TypeOfRemote", "ProcessMouseDevice")
             })
         }
-        webSocket?.send(pointerPayload.toString())
-
-        // মেথড ২: Tizen Touchpad Event
-        val touchPayload = JSONObject().apply {
-            put("method", "ms.remote.touchpad")
-            put("params", JSONObject().apply {
-                put("event", "move")
-                put("x", dx)
-                put("y", dy)
-            })
-        }
-        webSocket?.send(touchPayload.toString())
+        webSocket?.send(payload.toString())
     }
 
-    // ওয়াই-ফাই দিয়ে ব্রাউজারে মাউস ক্লিক
+    // ProcessMouseDevice প্রোটোকল দিয়ে মাউস ক্লিক
     fun sendWifiMouseClick() {
         if (!isConnected || webSocket == null) return
 
-        val clickPayload = JSONObject().apply {
+        val currentTime = System.currentTimeMillis()
+        val payload = JSONObject().apply {
             put("method", "ms.remote.control")
             put("params", JSONObject().apply {
                 put("Cmd", "LeftClick")
-                put("TypeOfRemote", "SendPointerEvent")
+                put("Position", JSONObject().apply {
+                    put("Time", currentTime.toString())
+                })
+                put("TypeOfRemote", "ProcessMouseDevice")
             })
         }
-        webSocket?.send(clickPayload.toString())
-
-        val touchClick = JSONObject().apply {
-            put("method", "ms.remote.touchpad")
-            put("params", JSONObject().apply {
-                put("event", "click")
-            })
-        }
-        webSocket?.send(touchClick.toString())
+        webSocket?.send(payload.toString())
     }
 
     fun cyclePictureMode() {
