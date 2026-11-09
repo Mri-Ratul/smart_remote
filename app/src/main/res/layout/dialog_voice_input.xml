@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="AI Voice Input"
+        android:textColor="#1E293B"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnDialogBn"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:backgroundTint="#0284C7"
+            android:text="বাংলায় বলুন"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnDialogEn"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:backgroundTint="#2563EB"
+            android:text="English"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+    <EditText
+        android:id="@+id/etDialogVoiceText"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:layout_marginTop="10dp"
+        android:background="#F1F5F9"
+        android:gravity="top|start"
+        android:hint="Speak or edit text..."
+        android:padding="8dp"
+        android:textColor="#1E293B"
+        android:textSize="13sp" />
+
+    <Button
+        android:id="@+id/btnDialogSend"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="10dp"
+        android:backgroundTint="#10B981"
+        android:text="Send To Screen"
+        android:textColor="#FFFFFF" />
+</LinearLayout>
