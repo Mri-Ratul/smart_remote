@@ -7,12 +7,12 @@ import android.util.Log
 import fi.iki.elonen.NanoHTTPD
 import kotlinx.coroutines.*
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
-import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 class SamsungTvManager(private val context: Context, private val listener: TvEventListener) {
@@ -40,13 +40,8 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
     fun connectTv(ip: String) {
         this.tvIp = ip
         scope.launch {
-            // ১. রেস্ট এপিআই দিয়ে টিভির আসল নাম ও মডেল ফেচ
             fetchTvDeviceInfo(ip)
-            
-            // ২. টিভিতে ইনস্টল করা আসল অ্যাপস ফেচ
             fetchInstalledApps(ip)
-
-            // ৩. রিমোট কন্ট্রোল কি ও মাউসের জন্য WebSocket কানেক্ট
             connectWebSocket(ip)
         }
     }
@@ -208,13 +203,13 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
     fun castOnlineImage(url: String) {
         scope.launch {
             val ip = tvIp ?: return@launch
-            // স্যামসাং ব্রাউজারে ইউআরএল ওপেন করার জন্য অ্যাপ্লিকেশন লঞ্চ এপিআই
             val payload = JSONObject().apply {
                 put("url", url)
             }
+            val jsonMedia = "application/json".toMediaTypeOrNull()
             val request = Request.Builder()
                 .url("http://$ip:8001/api/v2/applications/org.tizen.browser")
-                .post(RequestBody.create(MediaType.parse("application/json"), payload.toString()))
+                .post(RequestBody.create(jsonMedia, payload.toString()))
                 .build()
             try {
                 httpClient.newCall(request).execute()
@@ -241,13 +236,13 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
 
         scope.launch {
             val ip = tvIp ?: return@launch
-            // টিভিতে ব্রাউজার দিয়ে লোকাল ফাইল স্ট্রিম লোড করানো
             val payload = JSONObject().apply {
                 put("url", streamUrl)
             }
+            val jsonMedia = "application/json".toMediaTypeOrNull()
             val request = Request.Builder()
                 .url("http://$ip:8001/api/v2/applications/org.tizen.browser")
-                .post(RequestBody.create(MediaType.parse("application/json"), payload.toString()))
+                .post(RequestBody.create(jsonMedia, payload.toString()))
                 .build()
 
             try {
