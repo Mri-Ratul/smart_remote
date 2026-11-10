@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ratul.samsungremote"
+    namespace = "mri.ratul"
     compileSdk = 34
 
     defaultConfig {
