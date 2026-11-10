@@ -171,6 +171,12 @@ class MainActivity : AppCompatActivity(), SamsungTvManager.TvEventListener {
         }
     }
 
+    override fun onConnectionFailed(ip: String) {
+    webView.post {
+        webView.evaluateJavascript("toast('Failed to connect: $ip'); window.onTvDisconnected();", null)
+    }
+}
+
     override fun onMediaStreamStarted(title: String, thumbUrl: String, mediaType: String) {
         webView.post {
             webView.evaluateJavascript("window.onMediaCastStarted('$title', '$thumbUrl', '$mediaType')", null)
