@@ -12,8 +12,8 @@ android {
         applicationId = "mri.ratul"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     buildTypes {
@@ -39,14 +39,10 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
 
-    // TV REST API & Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // Local Media Server for Image/Video Casting
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 
-    // Firebase In-App Update Dependencies
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     implementation("com.google.firebase:firebase-appdistribution-api:16.0.0-beta14")
     implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta14")
