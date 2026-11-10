@@ -5,8 +5,8 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -23,7 +23,6 @@ class MainActivity : AppCompatActivity(), SamsungTvManager.TvEventListener {
     private lateinit var tvManager: SamsungTvManager
     private var pendingMediaType: String = "image"
 
-    // গ্যালারি থেকে ছবি ও ভিডিও সিলেক্ট করার রেজাল্ট হ্যান্ডলার
     private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val uri: Uri? = result.data?.data
@@ -36,12 +35,25 @@ class MainActivity : AppCompatActivity(), SamsungTvManager.TvEventListener {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        webView = findViewById(R.id.webView)
+        // লেআউট থেকে খোঁজা অথবা অটোমেটিক ফ্রেম তৈরি (যাতে Unresolved reference: webView আর না আসে)
+        val existingWebView = findViewById<WebView?>(resources.getIdentifier("webView", "id", packageName))
+        if (existingWebView != null) {
+            webView = existingWebView
+            setContentView(R.layout.activity_main)
+        } else {
+            webView = WebView(this).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+            setContentView(webView)
+        }
+
         tvManager = SamsungTvManager(this, this)
 
-        // ১. ল্যাগ ১০০% দূর করতে জিপিইউ হার্ডওয়্যার অ্যাকসিলারেশন এনাবল করা
+        // জিপিইউ হার্ডওয়্যার অ্যাকসিলারেশন এনাবল
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
         val settings: WebSettings = webView.settings
@@ -57,15 +69,11 @@ class MainActivity : AppCompatActivity(), SamsungTvManager.TvEventListener {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // ডিফল্ট আইপি থাকলে অটো কানেক্ট ট্রাই করবে
                 tvManager.connectTv("192.168.0.101")
             }
         }
 
-        // ২. জাভাস্ক্রিপ্ট ইন্টারফেস বাইন্ড করা
         webView.addJavascriptInterface(WebAppInterface(), "Android")
-
-        // HTML লোড
         webView.loadUrl("file:///android_asset/index.html")
     }
 
@@ -139,14 +147,12 @@ class MainActivity : AppCompatActivity(), SamsungTvManager.TvEventListener {
             inputStream?.close()
             outputStream.close()
 
-            // লোকাল সার্ভারে পুশ করে টিভিতে কাস্ট পাঠানো
             tvManager.startLocalMediaStream(cacheFile, mimeType)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    // SamsungTvManager এর ইভেন্ট লিসেনার (WebView-এ ডেটা পুশ)
     override fun onTvConnected(name: String, ip: String, model: String) {
         webView.post {
             webView.evaluateJavascript("window.onTvConnected('$name', '$ip', '$model')", null)
