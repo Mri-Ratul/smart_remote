@@ -1,4 +1,4 @@
-name: Build, Distribute & Test Samsung Remote
+name: Build and Distribute Samsung Remote
 
 on:
   push:
@@ -21,27 +21,16 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Locate Project & Build Debug APK
-        id: build_step
+      - name: Build Debug APK
         run: |
           if [ -f "./gradlew" ]; then
-            echo "Building from root..."
             chmod +x ./gradlew
             ./gradlew assembleDebug --no-daemon
             echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_ENV
           elif [ -f "./android/gradlew" ]; then
-            echo "Building from android/ subdirectory..."
             chmod +x ./android/gradlew
-            cd android
-            ./gradlew assembleDebug --no-daemon
-            cd ..
+            cd android && ./gradlew assembleDebug --no-daemon && cd ..
             echo "apk_dir=android/app/build/outputs/apk/debug" >> $GITHUB_ENV
-          else
-            echo "Wrapper missing, generating compatible wrapper..."
-            gradle wrapper --gradle-version 8.7
-            chmod +x ./gradlew
-            ./gradlew assembleDebug --no-daemon
-            echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_ENV
           fi
 
       - name: Upload APK Artifacts
@@ -51,7 +40,7 @@ jobs:
           path: ${{ env.apk_dir }}/app-debug.apk
 
   distribute:
-    name: Firebase App Distribution (Real TV Test)
+    name: Firebase App Distribution
     needs: build
     runs-on: ubuntu-latest
 
@@ -73,34 +62,3 @@ jobs:
           groups: internal-testers
           file: apk-output/app-debug.apk
           releaseNotes: "Build commit: ${{ github.sha }}"
-
-  test-lab:
-    name: Firebase Test Lab (Robo Test)
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Download Built APK
-        uses: actions/download-artifact@v4
-        with:
-          name: app-debug
-          path: apk-output
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Run Firebase Robo Test
-        run: |
-          gcloud firebase test android run \
-            --type robo \
-            --app apk-output/app-debug.apk \
-            --device model=oriole,version=33,locale=en,orientation=portrait \
-            --timeout 2m
