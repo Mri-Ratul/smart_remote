@@ -1,103 +1,94 @@
 package com.ratul.samsungremote
 
-import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.util.Log
+import android.provider.OpenableColumns
+import android.view.View
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.google.firebase.appdistribution.FirebaseAppDistribution
-import kotlinx.coroutines.*
+import java.io.File
+import java.io.FileOutputStream
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SamsungTvManager.TvEventListener {
 
     private lateinit var webView: WebView
     private lateinit var tvManager: SamsungTvManager
-    private var speechRecognizer: SpeechRecognizer? = null
+    private var pendingMediaType: String = "image"
+
+    // গ্যালারি থেকে ছবি ও ভিডিও সিলেক্ট করার রেজাল্ট হ্যান্ডলার
+    private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val uri: Uri? = result.data?.data
+            if (uri != null) {
+                handleSelectedMediaUri(uri)
+            }
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // ইন-অ্যাপ নতুন রিলিজ আপডেট চেক
-        checkForAppUpdates()
+        webView = findViewById(R.id.webView)
+        tvManager = SamsungTvManager(this, this)
 
-        tvManager = SamsungTvManager(this)
-        webView = findViewById(R.id.webViewRemote)
+        // ১. ল্যাগ ১০০% দূর করতে জিপিইউ হার্ডওয়্যার অ্যাকসিলারেশন এনাবল করা
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
-        // ওয়েবভিউ সেটিংস কনফিগারেশন
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            loadsImagesAutomatically = true
-            useWideViewPort = true
-            loadWithOverviewMode = true
-        }
+        val settings: WebSettings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.allowFileAccess = true
+        settings.allowContentAccess = true
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
+        settings.cacheMode = WebSettings.LOAD_NO_CACHE
 
-        // এইচটিএমএল-এর সাথে কোটলিনের ব্রিজ কানেকশন
-        webView.addJavascriptInterface(WebAppInterface(), "Android")
-        webView.webViewClient = WebViewClient()
-
-        // assets ফোল্ডারের index.html লোড করা
-        webView.loadUrl("file:///android_asset/index.html")
-
-        checkVoicePermission()
-
-        // টিভি ডিসকভারি লিসেনার
-        tvManager.onTvDiscovered = { ip ->
-            runOnUiThread {
-                webView.evaluateJavascript("if(window.onTvConnected) window.onTvConnected('$ip');", null)
+        webView.webChromeClient = WebChromeClient()
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // ডিফল্ট আইপি থাকলে অটো কানেক্ট ট্রাই করবে
+                tvManager.connectTv("192.168.0.101")
             }
         }
 
-        // অটো কানেক্ট আগের আইপি থাকলে
-        val savedIp = tvManager.getSavedIp()
-        if (savedIp.isNotEmpty()) {
-            tvManager.connect(savedIp)
-        } else {
-            tvManager.autoDiscoverTv()
-        }
+        // ২. জাভাস্ক্রিপ্ট ইন্টারফেস বাইন্ড করা
+        webView.addJavascriptInterface(WebAppInterface(), "Android")
+
+        // HTML লোড
+        webView.loadUrl("file:///android_asset/index.html")
     }
 
-    override fun onResume() {
-        super.onResume()
-        // অ্যাপ ব্যাকগ্রাউন্ড থেকে আবার চালু করলেও আপডেট চেক করবে
-        checkForAppUpdates()
-    }
-
-    // Firebase App Distribution In-App Update চেকার
-    private fun checkForAppUpdates() {
-        try {
-            FirebaseAppDistribution.getInstance().updateIfNewReleaseAvailable()
-                .addOnSuccessListener {
-                    Log.d("AppDistribution", "Update check triggered successfully.")
-                }
-                .addOnFailureListener { e ->
-                    Log.e("AppDistribution", "Update check failed: ${e.message}")
-                }
-        } catch (e: Exception) {
-            Log.e("AppDistribution", "Error initializing App Distribution: ${e.message}")
-        }
-    }
-
-    // JavaScript Interface: HTML থেকে যেসব ফাংশন কল হবে
     inner class WebAppInterface {
+
+        @JavascriptInterface
+        fun connectTv(ip: String) {
+            tvManager.connectTv(ip)
+        }
 
         @JavascriptInterface
         fun sendKey(key: String) {
             tvManager.sendKey(key)
+        }
+
+        @JavascriptInterface
+        fun sendMouseMove(dx: Int, dy: Int) {
+            tvManager.sendMouseMove(dx, dy)
+        }
+
+        @JavascriptInterface
+        fun sendMouseClick() {
+            tvManager.sendMouseClick()
         }
 
         @JavascriptInterface
@@ -106,102 +97,82 @@ class MainActivity : AppCompatActivity() {
         }
 
         @JavascriptInterface
-        fun triggerSoundShift() {
-            // মুভির অ্যাকশন সিনে ভলিউম ৮০ থেকে ৫০-এ নামানো
-            CoroutineScope(Dispatchers.IO).launch {
-                repeat(30) {
-                    tvManager.sendKey("KEY_VOLDOWN")
-                    delay(35)
+        fun triggerSoundShift(targetLevel: Int) {
+            tvManager.triggerSoundShift(targetLevel)
+        }
+
+        @JavascriptInterface
+        fun castOnlineImage(url: String) {
+            tvManager.castOnlineImage(url)
+        }
+
+        @JavascriptInterface
+        fun startCast(type: String) {
+            runOnUiThread {
+                pendingMediaType = type.lowercase()
+                val intent = Intent(Intent.ACTION_GET_CONTENT)
+                if (pendingMediaType.contains("video")) {
+                    intent.type = "video/*"
+                } else {
+                    intent.type = "image/*"
                 }
+                mediaPickerLauncher.launch(Intent.createChooser(intent, "Select Media to Cast"))
             }
-        }
-
-        @JavascriptInterface
-        fun sendMouseMove(dx: Int, dy: Int) {
-            tvManager.sendWifiMouseMove(dx, dy)
-        }
-
-        @JavascriptInterface
-        fun sendMouseClick() {
-            tvManager.sendWifiMouseClick()
-        }
-
-        @JavascriptInterface
-        fun connectTv(ip: String) {
-            tvManager.connect(ip)
         }
 
         @JavascriptInterface
         fun disconnectTv() {
             tvManager.disconnect()
         }
+    }
 
-        @JavascriptInterface
-        fun autoDiscoverTv() {
-            tvManager.autoDiscoverTv()
-        }
+    private fun handleSelectedMediaUri(uri: Uri) {
+        try {
+            val contentResolver = applicationContext.contentResolver
+            val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+            val inputStream = contentResolver.openInputStream(uri)
 
-        @JavascriptInterface
-        fun sendText(text: String) {
-            tvManager.sendText(text)
-        }
+            val cacheFile = File(cacheDir, "stream_media_temp")
+            val outputStream = FileOutputStream(cacheFile)
+            inputStream?.copyTo(outputStream)
 
-        @JavascriptInterface
-        fun startVoice(lang: String) {
-            runOnUiThread {
-                startSpeechListening(lang)
-            }
-        }
+            inputStream?.close()
+            outputStream.close()
 
-        @JavascriptInterface
-        fun startCast(type: String) {
-            runOnUiThread {
-                Toast.makeText(this@MainActivity, "Starting $type via Wi-Fi...", Toast.LENGTH_SHORT).show()
-                // ওয়াই-ফাই স্ক্রিন কাস্টিং ও স্ট্রিমিং হ্যান্ডলার
-            }
+            // লোকাল সার্ভারে পুশ করে টিভিতে কাস্ট পাঠানো
+            tvManager.startLocalMediaStream(cacheFile, mimeType)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
-    // ভয়েস ইনপুট প্রসেসিং
-    private fun startSpeechListening(lang: String) {
-        speechRecognizer?.destroy()
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+    // SamsungTvManager এর ইভেন্ট লিসেনার (WebView-এ ডেটা পুশ)
+    override fun onTvConnected(name: String, ip: String, model: String) {
+        webView.post {
+            webView.evaluateJavascript("window.onTvConnected('$name', '$ip', '$model')", null)
         }
-
-        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) {
-                    val transcribedText = matches[0]
-                    // সরাসরি HTML-এর ইনপুট বক্সে ভয়েস টেক্সট পাঠিয়ে দেওয়া
-                    webView.evaluateJavascript("document.getElementById('voiceField').value = '$transcribedText';", null)
-                }
-            }
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onError(error: Int) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-        speechRecognizer?.startListening(intent)
     }
 
-    private fun checkVoicePermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
+    override fun onTvDisconnected() {
+        webView.post {
+            webView.evaluateJavascript("window.onTvDisconnected()", null)
+        }
+    }
+
+    override fun onAppsLoaded(appsJson: String) {
+        webView.post {
+            webView.evaluateJavascript("window.setTvApps($appsJson)", null)
+        }
+    }
+
+    override fun onMediaStreamStarted(title: String, thumbUrl: String, mediaType: String) {
+        webView.post {
+            webView.evaluateJavascript("window.onMediaCastStarted('$title', '$thumbUrl', '$mediaType')", null)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        speechRecognizer?.destroy()
         tvManager.disconnect()
     }
 }
