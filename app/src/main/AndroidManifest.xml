@@ -16,11 +16,12 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
-        android:allowBackup="true"
-        android:icon="@android:drawable/sym_def_app_icon"
-        android:label="Samsung Remote"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
+    android:allowBackup="true"
+    android:icon="@mipmap/ic_launcher"
+    android:roundIcon="@mipmap/ic_launcher_round"
+    android:label="@string/app_name"
+    android:supportsRtl="true"
+    android:theme="@style/Theme.SmartRemote">
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
