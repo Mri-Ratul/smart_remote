@@ -21,6 +21,11 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      # সিক্রেট থেকে google-services.json ফাইল তৈরি করা
+      - name: Create google-services.json
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+
       - name: Build Debug APK
         run: |
           if [ -f "./gradlew" ]; then
@@ -35,7 +40,6 @@ jobs:
             ./gradlew assembleDebug --no-daemon
           fi
 
-      # বিল্ড হওয়া APK-এর সঠিক লোকেশন খুঁজে বের করা
       - name: Locate Built APK
         id: find_apk
         run: |
@@ -43,7 +47,6 @@ jobs:
           echo "Found APK at: $APK_PATH"
           echo "apk_path=$APK_PATH" >> $GITHUB_ENV
 
-      # সরাসরি ফায়ারবেসে আপলোড
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
