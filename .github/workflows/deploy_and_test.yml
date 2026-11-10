@@ -24,7 +24,6 @@ jobs:
       - name: Locate Project & Build Debug APK
         id: build_step
         run: |
-          # প্রজেক্ট রুট বা কোনো সাব-ফোল্ডারে আছে কিনা তা নিশ্চিত করা
           if [ -f "./gradlew" ]; then
             echo "Building from root..."
             chmod +x ./gradlew
@@ -38,7 +37,6 @@ jobs:
             cd ..
             echo "apk_dir=android/app/build/outputs/apk/debug" >> $GITHUB_ENV
           else
-            # যদি gradlew ফাইলটি গিট ট্র্যাকিংয়ে মিসিং থাকে, তাহলে র‍্যাপার জেনারেট করে বিল্ড করবে
             echo "Wrapper missing, generating compatible wrapper..."
             gradle wrapper --gradle-version 8.7
             chmod +x ./gradlew
@@ -105,6 +103,4 @@ jobs:
             --type robo \
             --app apk-output/app-debug.apk \
             --device model=oriole,version=33,locale=en,orientation=portrait \
-            --results-bucket=tv-remote-ae0c9.appspot.com \
-            --results-dir=test-lab-runs/${{ github.run_id }} \
             --timeout 2m
