@@ -105,4 +105,6 @@ jobs:
             --type robo \
             --app apk-output/app-debug.apk \
             --device model=oriole,version=33,locale=en,orientation=portrait \
+            --results-bucket=tv-remote-ae0c9.appspot.com \
+            --results-dir=test-lab-runs/${{ github.run_id }} \
             --timeout 2m
