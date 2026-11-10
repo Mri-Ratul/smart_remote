@@ -21,36 +21,36 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      # gradlew ফাইল রুটে থাকলে এক্সিকিউট পারমিশন সেট করবে
-      - name: Grant Execute Permission to Gradlew
+      - name: Locate Project & Build Debug APK
+        id: build_step
         run: |
+          # প্রজেক্ট রুট বা কোনো সাব-ফোল্ডারে আছে কিনা তা নিশ্চিত করা
           if [ -f "./gradlew" ]; then
+            echo "Building from root..."
             chmod +x ./gradlew
+            ./gradlew assembleDebug --no-daemon
+            echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_ENV
           elif [ -f "./android/gradlew" ]; then
+            echo "Building from android/ subdirectory..."
             chmod +x ./android/gradlew
-          fi
-
-      # রুটে অথবা android ফোল্ডারে থাকলে অটো বিল্ড রান করবে
-      - name: Build Debug APK
-        run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug
-          elif [ -f "./android/gradlew" ]; then
-            cd android && ./gradlew assembleDebug
+            cd android
+            ./gradlew assembleDebug --no-daemon
+            cd ..
+            echo "apk_dir=android/app/build/outputs/apk/debug" >> $GITHUB_ENV
           else
-            gradle assembleDebug
+            # যদি gradlew ফাইলটি গিট ট্র্যাকিংয়ে মিসিং থাকে, তাহলে র‍্যাপার জেনারেট করে বিল্ড করবে
+            echo "Wrapper missing, generating compatible wrapper..."
+            gradle wrapper --gradle-version 8.7
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --no-daemon
+            echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_ENV
           fi
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.apk_dir }}/app-debug.apk
 
   distribute:
     name: Firebase App Distribution (Real TV Test)
@@ -67,14 +67,14 @@ jobs:
           name: app-debug
           path: apk-output
 
-      - name: Locate and Upload to Firebase App Distribution
+      - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
           groups: internal-testers
           file: apk-output/app-debug.apk
-          releaseNotes: "Build: ${{ github.sha }}"
+          releaseNotes: "Build commit: ${{ github.sha }}"
 
   test-lab:
     name: Firebase Test Lab (Robo Test)
