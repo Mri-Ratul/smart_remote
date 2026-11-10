@@ -479,10 +479,10 @@ svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width:
 
         <!-- Floating Bottom Stream Bar -->
         <div class="cast-mini-media glass">
-          <div class="cast-mini-thumb" style="background:url('https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=100&auto=format&fit=crop&q=60') center/cover"></div>
+          <div class="cast-mini-thumb" id="castMiniThumb" style="background:url('https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=100&auto=format&fit=crop&q=60') center/cover"></div>
           <div class="cast-mini-info">
-            <div>20261028_101920.mp4</div>
-            <span style="font-size:10px;color:#10b981">Ready to Stream</span>
+            <div id="castMiniTitle">20261028_101920.mp4</div>
+            <span id="castMiniStatus" style="font-size:10px;color:#10b981">Ready to Stream</span>
           </div>
           <div class="cast-mini-ctrls">
             <span onclick="sendCmd('KEY_REWIND')"><svg class="i"><use href="#rew"/></svg></span>
@@ -880,9 +880,9 @@ function switchMode(mode){
 
 /* ---------- 4. Android Kotlin Bridge ---------- */
 function sendCmd(key){
-  // Support PICTURE button Tizen fallbacks
-  if (key === 'KEY_PICTURE_MODE' && (!window.Android || !window.Android.sendKey)) {
-    console.log("TV Key Pressed:", key, "Fallback: KEY_PMODE");
+  if (key === 'KEY_PICTURE_MODE') {
+    // Tizen fallback mapping support
+    key = 'KEY_PMODE';
   }
   if (window.Android && window.Android.sendKey) {
     window.Android.sendKey(key);
@@ -975,9 +975,22 @@ function sendMouseClick(){
   else console.log("Mouse Click Triggered");
 }
 
-/* ---------- 7. Cast Hub Handlers ---------- */
+/* ---------- 7. Cast Hub Handlers (Online & Local Media) ---------- */
 function triggerCast(type){
   haptic(14);
+  if (type === 'Online Image') {
+    const url = prompt("Enter Image URL to open on TV browser:", "https://");
+    if (url && url.startsWith("http")) {
+      toast("Sending Image URL to TV...");
+      if (window.Android && window.Android.castOnlineImage) {
+        window.Android.castOnlineImage(url);
+      } else {
+        console.log("Cast URL to TV:", url);
+      }
+    }
+    return;
+  }
+  
   toast('Starting ' + type + '...');
   if (window.Android && window.Android.startCast) {
     window.Android.startCast(type);
@@ -986,12 +999,26 @@ function triggerCast(type){
   }
 }
 
+// Media Feed Updates from Kotlin Bridge
+window.onMediaCastStarted = function(title, thumbUrl, mediaType) {
+  if ($('castMiniTitle')) $('castMiniTitle').textContent = title || "Now Streaming";
+  if ($('castMiniStatus')) $('castMiniStatus').textContent = "Streaming: " + (mediaType || "Media");
+  if ($('castMiniThumb') && thumbUrl) {
+    $('castMiniThumb').style.background = `url('${thumbUrl}') center/cover`;
+  }
+  toast("Now Casting: " + title);
+};
+
 /* ---------- 8. Dynamic TV Apps & Pinned Favorites ---------- */
 let installedTvApps = [];
 let pinnedAppIds = JSON.parse(localStorage.getItem('pinnedTvAppsList') || '[]');
 
 window.setTvApps = function(apps){
-  installedTvApps = Array.isArray(apps) ? apps : [];
+  try {
+    installedTvApps = (typeof apps === 'string') ? JSON.parse(apps) : (Array.isArray(apps) ? apps : []);
+  } catch(e) {
+    installedTvApps = [];
+  }
   renderAppsDrawer();
   renderPinnedFavorites();
 };
@@ -1015,9 +1042,15 @@ function renderAppsDrawer(filter = ''){
     const isPinned = pinnedAppIds.includes(app.appId);
     const card = document.createElement('div');
     card.className = 'full-app-card glass press';
+    
+    // Icon fallback / Image support
+    const iconContent = app.iconUrl 
+      ? `<img src="${app.iconUrl}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;">`
+      : (app.iconText || (app.name || 'APP').slice(0, 3).toUpperCase());
+
     card.innerHTML = `
       <span class="star-btn" title="Pin / Unpin">${isPinned ? '★' : '☆'}</span>
-      <div class="badge" style="background:${app.bg || 'var(--grad)'}">${app.iconText || app.name.slice(0, 3)}</div>
+      <div class="badge" style="background:${app.bg || 'var(--grad)'}">${iconContent}</div>
       <b>${app.name}</b>
     `;
     card.querySelector('.star-btn').onclick = (e) => {
@@ -1042,8 +1075,12 @@ function renderPinnedFavorites(){
   pinnedList.forEach(app => {
     const div = document.createElement('div');
     div.className = 'fav-app glass press';
+    const iconContent = app.iconUrl 
+      ? `<img src="${app.iconUrl}" style="width:24px;height:24px;border-radius:6px;object-fit:cover;">`
+      : (app.iconText || (app.name || 'APP').slice(0, 3).toUpperCase());
+
     div.innerHTML = `
-      <div class="badge" style="background:${app.bg || 'var(--grad)'}">${app.iconText || app.name.slice(0, 3)}</div>
+      <div class="badge" style="background:${app.bg || 'var(--grad)'}">${iconContent}</div>
       <b>${app.name}</b>
     `;
     div.onclick = () => launchApp(app.appId);
@@ -1077,15 +1114,18 @@ let activeTvIp = null;
 
 window.onTvConnected = function(name, ip, model){
   activeTvIp = ip;
-  $('tvNameDisplay').textContent = name || model || 'Samsung Smart TV';
-  $('statusIp').textContent = 'Connected · ' + ip;
+  const friendlyName = (name && name !== "undefined") ? name : (model && model !== "undefined" ? model : "Samsung Smart TV");
+  const modelText = (model && model !== "undefined") ? model : "Connected";
+
+  $('tvNameDisplay').textContent = friendlyName;
+  $('statusIp').textContent = `${modelText} · ${ip}`;
   $('tvStatusBadge').classList.add('connected');
-  $('castTvName').textContent = name || 'Samsung Smart TV';
-  $('pairSavedTvName').textContent = name || 'Samsung Smart TV';
-  $('pairSavedTvIp').textContent = ip + ' · Connected';
+  $('castTvName').textContent = friendlyName;
+  $('pairSavedTvName').textContent = friendlyName;
+  $('pairSavedTvIp').textContent = `${ip} · ${modelText}`;
   $('cfgIpField').value = ip;
   $('tvIpField').value = ip;
-  toast('Connected: ' + (name || ip));
+  toast('Connected: ' + friendlyName);
 };
 
 window.onTvDisconnected = function(){
@@ -1095,6 +1135,49 @@ window.onTvDisconnected = function(){
   $('tvStatusBadge').classList.remove('connected');
   $('pairSavedTvIp').textContent = 'Not connected';
   toast('TV Disconnected');
+};
+
+/* Discovered TVs list rendering in Pairing Modal */
+window.onDiscoveredTvs = function(tvList) {
+  const container = $('networkTvsBox');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  let list = [];
+  try {
+    list = typeof tvList === 'string' ? JSON.parse(tvList) : tvList;
+  } catch(e) { list = []; }
+
+  if (!list || list.length === 0) {
+    container.innerHTML = `
+      <div class="pair-tv-item">
+        <div class="pair-tv-meta">
+          <div class="pair-tv-avatar"><svg class="i"><use href="#wifi"/></svg></div>
+          <div class="pair-tv-txt">
+            <h5>No TVs Found</h5>
+            <span style="color:var(--muted)">Tap scan to retry</span>
+          </div>
+        </div>
+        <button style="color:var(--accent1);font-weight:700;font-size:12px" onclick="scanNetwork()">Scan</button>
+      </div>`;
+    return;
+  }
+
+  list.forEach(tv => {
+    const item = document.createElement('div');
+    item.className = 'pair-tv-item';
+    item.innerHTML = `
+      <div class="pair-tv-meta">
+        <div class="pair-tv-avatar"><svg class="i"><use href="#tv"/></svg></div>
+        <div class="pair-tv-txt">
+          <h5>${tv.name || 'Samsung TV'}</h5>
+          <span style="color:var(--muted)">${tv.ip} ${tv.model ? '· ' + tv.model : ''}</span>
+        </div>
+      </div>
+      <button style="color:var(--accent1);font-weight:700;font-size:12px" onclick="connectTv('${tv.ip}')">Connect</button>
+    `;
+    container.appendChild(item);
+  });
 };
 
 /* ---------- 10. Pairing & Network Actions ---------- */
