@@ -1,6 +1,7 @@
 package com.ratul.samsungremote
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.wifi.WifiManager
 import android.util.Base64
 import android.util.Log
@@ -13,7 +14,12 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 class SamsungTvManager(private val context: Context, private val listener: TvEventListener) {
 
@@ -22,15 +28,30 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
         fun onTvDisconnected()
         fun onAppsLoaded(appsJson: String)
         fun onMediaStreamStarted(title: String, thumbUrl: String, mediaType: String)
+        fun onConnectionFailed(ip: String)
     }
 
     private var tvIp: String? = null
     private var webSocket: WebSocket? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val prefs: SharedPreferences = context.getSharedPreferences("samsung_remote_prefs", Context.MODE_PRIVATE)
+
+    // SSL Trust All (Samsung Local Self-Signed Certs এর জন্য)
+    private val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+    })
+
+    private val sslContext = SSLContext.getInstance("SSL").apply {
+        init(null, trustAllCerts, SecureRandom())
+    }
 
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(3, TimeUnit.SECONDS)
-        .readTimeout(3, TimeUnit.SECONDS)
+        .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+        .hostnameVerifier { _, _ -> true }
+        .connectTimeout(2, TimeUnit.SECONDS)
+        .readTimeout(2, TimeUnit.SECONDS)
         .build()
 
     private var localMediaServer: LocalMediaServer? = null
@@ -40,21 +61,30 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
     fun connectTv(ip: String) {
         this.tvIp = ip
         scope.launch {
-            fetchTvDeviceInfo(ip)
-            fetchInstalledApps(ip)
-            connectWebSocket(ip)
+            // ১. ভ্যালিডেশন: শুধুমাত্র টিভি সত্যিকারের রেসপন্স দিলেই কানেক্ট করবে
+            val isLive = verifyAndFetchTvInfo(ip)
+            if (isLive) {
+                fetchInstalledApps(ip)
+                connectSecureWebSocket(ip)
+            } else {
+                withContext(Dispatchers.Main) {
+                    listener.onConnectionFailed(ip)
+                    listener.onTvDisconnected()
+                }
+            }
         }
     }
 
-    private suspend fun fetchTvDeviceInfo(ip: String) {
+    private suspend fun verifyAndFetchTvInfo(ip: String): Boolean {
         val request = Request.Builder()
             .url("http://$ip:8001/api/v2/")
             .build()
 
-        try {
+        return try {
             val response = httpClient.newCall(request).execute()
             if (response.isSuccessful) {
-                val json = JSONObject(response.body?.string() ?: "")
+                val body = response.body?.string() ?: ""
+                val json = JSONObject(body)
                 val device = json.optJSONObject("device")
                 val name = device?.optString("name", "Samsung Smart TV") ?: "Samsung Smart TV"
                 val model = device?.optString("modelName", "Tizen TV") ?: "Tizen TV"
@@ -62,17 +92,70 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
                 withContext(Dispatchers.Main) {
                     listener.onTvConnected(name, ip, model)
                 }
+                true
             } else {
-                withContext(Dispatchers.Main) {
-                    listener.onTvConnected("Samsung Smart TV", ip, "Tizen")
-                }
+                false
             }
         } catch (e: Exception) {
-            Log.e("SamsungTvManager", "Device Info Fetch Error", e)
-            withContext(Dispatchers.Main) {
-                listener.onTvConnected("Samsung Smart TV", ip, "Tizen")
-            }
+            Log.e("SamsungTvManager", "Invalid IP or unreachable: $ip")
+            false // ভুল আইপি হলে মিথ্যা রিটার্ন করবে, কোনো ফেক কানেকশন নয়
         }
+    }
+
+    private fun connectSecureWebSocket(ip: String) {
+        webSocket?.close(1000, "Reconnecting")
+
+        val appNameBase64 = Base64.encodeToString("SamsungRemotePro".toByteArray(), Base64.NO_WRAP)
+        val savedToken = prefs.getString("tv_token_$ip", "") ?: ""
+
+        // WSS Port 8002 (N4300 এর জন্য সিকিউর পেয়ারিং চ্যানেল যা স্ক্রিনে পপআপ ট্রিগার করে)
+        val tokenParam = if (savedToken.isNotEmpty()) "&token=$savedToken" else ""
+        val wsUrl = "wss://$ip:8002/api/v2/channels/samsung.remote.control?name=$appNameBase64$tokenParam"
+
+        val request = Request.Builder().url(wsUrl).build()
+        webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.d("SamsungTvManager", "WebSocket Handshake Connected!")
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                try {
+                    val json = JSONObject(text)
+                    // টিভি যখন পেয়ারিং একসেপ্ট করে টোকেন পাঠায়
+                    if (json.optString("event") == "ms.channel.connect") {
+                        val data = json.optJSONObject("data")
+                        val token = data?.optString("token", "") ?: ""
+                        val clients = data?.optJSONArray("clients")
+                        if (token.isNotEmpty()) {
+                            prefs.edit().putString("tv_token_$ip", token).apply()
+                            Log.d("SamsungTvManager", "Token saved: $token")
+                        }
+                    }
+                } catch (e: Exception) {}
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                Log.e("SamsungTvManager", "WSS Failure: ${t.message}, Retrying with WS 8001...")
+                // WSS না পেলে ফলব্যাক হিসেবে পোর্ট 8001 ট্রাই করা
+                connectFallbackWs(ip)
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                withContextUI { listener.onTvDisconnected() }
+            }
+        })
+    }
+
+    private fun connectFallbackWs(ip: String) {
+        val appNameBase64 = Base64.encodeToString("SamsungRemotePro".toByteArray(), Base64.NO_WRAP)
+        val wsUrl = "ws://$ip:8001/api/v2/channels/samsung.remote.control?name=$appNameBase64"
+        val request = Request.Builder().url(wsUrl).build()
+
+        webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                withContextUI { listener.onTvDisconnected() }
+            }
+        })
     }
 
     private suspend fun fetchInstalledApps(ip: String) {
@@ -102,30 +185,7 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
                     listener.onAppsLoaded(formattedArray.toString())
                 }
             }
-        } catch (e: Exception) {
-            Log.e("SamsungTvManager", "Installed Apps Fetch Error", e)
-        }
-    }
-
-    private fun connectWebSocket(ip: String) {
-        webSocket?.close(1000, "Reconnecting")
-        val appNameBase64 = Base64.encodeToString("SamsungRemotePro".toByteArray(), Base64.NO_WRAP)
-        val wsUrl = "ws://$ip:8001/api/v2/channels/samsung.remote.control?name=$appNameBase64"
-
-        val request = Request.Builder().url(wsUrl).build()
-        webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: Response) {
-                Log.d("SamsungTvManager", "WebSocket Open")
-            }
-
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e("SamsungTvManager", "WebSocket Failure: ${t.message}")
-            }
-
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                withContextUI { listener.onTvDisconnected() }
-            }
-        })
+        } catch (e: Exception) {}
     }
 
     fun sendKey(key: String) {
@@ -181,11 +241,7 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
                 .url("http://$ip:8001/api/v2/applications/$appId")
                 .post(RequestBody.create(null, ByteArray(0)))
                 .build()
-            try {
-                httpClient.newCall(request).execute()
-            } catch (e: Exception) {
-                Log.e("SamsungTvManager", "Launch app error", e)
-            }
+            try { httpClient.newCall(request).execute() } catch (e: Exception) {}
         }
     }
 
@@ -203,9 +259,7 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
     fun castOnlineImage(url: String) {
         scope.launch {
             val ip = tvIp ?: return@launch
-            val payload = JSONObject().apply {
-                put("url", url)
-            }
+            val payload = JSONObject().apply { put("url", url) }
             val jsonMedia = "application/json".toMediaTypeOrNull()
             val request = Request.Builder()
                 .url("http://$ip:8001/api/v2/applications/org.tizen.browser")
@@ -216,9 +270,7 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
                 withContext(Dispatchers.Main) {
                     listener.onMediaStreamStarted("Online Image", url, "Online Image")
                 }
-            } catch (e: Exception) {
-                Log.e("SamsungTvManager", "Cast Online Image error", e)
-            }
+            } catch (e: Exception) {}
         }
     }
 
@@ -236,9 +288,7 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
 
         scope.launch {
             val ip = tvIp ?: return@launch
-            val payload = JSONObject().apply {
-                put("url", streamUrl)
-            }
+            val payload = JSONObject().apply { put("url", streamUrl) }
             val jsonMedia = "application/json".toMediaTypeOrNull()
             val request = Request.Builder()
                 .url("http://$ip:8001/api/v2/applications/org.tizen.browser")
@@ -250,9 +300,7 @@ class SamsungTvManager(private val context: Context, private val listener: TvEve
                 withContext(Dispatchers.Main) {
                     listener.onMediaStreamStarted(file.name, streamUrl, if (mimeType.contains("video")) "Video" else "Image")
                 }
-            } catch (e: Exception) {
-                Log.e("SamsungTvManager", "Local Stream Launch Error", e)
-            }
+            } catch (e: Exception) {}
         }
     }
 
