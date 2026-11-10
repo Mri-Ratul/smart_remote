@@ -8,7 +8,7 @@
 <style>
 /* ============ THEME TOKENS ============ */
 :root,[data-theme="dark"]{
-  --bg:#070b16; --body-bg:#03050c;
+  --bg:#070b16; --body-bg:#070b16;
   --aur1:rgba(124,92,255,.35); --aur2:rgba(79,140,255,.28); --aur3:rgba(46,230,166,.14);
   --glass:rgba(255,255,255,.055); --glass-2:rgba(255,255,255,.10);
   --line:rgba(255,255,255,.10); --text:#eef2ff; --muted:#8b95b3;
@@ -16,7 +16,7 @@
   --grad:linear-gradient(135deg,var(--blue) 0%,var(--violet) 100%);
   --glow:0 8px 28px rgba(79,140,255,.45);
   --shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
-  --frame-shadow:0 30px 80px rgba(0,0,0,.6);
+  --frame-shadow:none;
   --dpad-bg:radial-gradient(circle at 30% 25%,rgba(255,255,255,.12),rgba(255,255,255,.03) 60%);
   --dpad-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12),0 0 60px rgba(79,140,255,.12);
   --dpad-ring:rgba(255,255,255,.08);
@@ -24,37 +24,41 @@
   --pad-dots:rgba(124,140,255,.35); --pad-text:#55608a;
   --pad-shadow:inset 0 4px 20px rgba(0,0,0,.6);
   --sheet-bg:linear-gradient(180deg,#141b30,#0c1222);
-  --overlay:rgba(3,6,14,.65);
-  --toast-bg:rgba(20,27,48,.95);
+  --overlay:rgba(3,6,14,.75);
+  --toast-bg:rgba(18,24,42,.88);
+  --toast-border:rgba(255,255,255,.15);
   --field-bg:rgba(255,255,255,.05);
-  --power-glow:0 0 22px rgba(255,77,106,.22);
-  --status-bg:rgba(46,230,166,.10); --status-line:rgba(46,230,166,.22);
-  --orig-body-bg:#161a22;
-  --orig-card-border:#2a3342;
-  --orig-btn-bg:#242a38;
+  --power-glow:0 0 22px rgba(255,77,106,.25);
+  --status-bg:rgba(139,149,179,.12); --status-line:rgba(139,149,179,.25);
+  --status-color:var(--muted);
+  --orig-body-bg:#12161f;
+  --orig-card-border:#252d3d;
+  --orig-btn-bg:#1e2533;
 }
 [data-theme="light"]{
-  --bg:#eef2f9; --body-bg:#d9e0ec;
-  --aur1:rgba(124,92,255,.20); --aur2:rgba(79,140,255,.20); --aur3:rgba(46,230,166,.16);
-  --glass:rgba(255,255,255,.72); --glass-2:rgba(226,232,244,.95);
-  --line:rgba(15,23,42,.08); --text:#0f172a; --muted:#64748b;
+  --bg:#f1f5fb; --body-bg:#f1f5fb;
+  --aur1:rgba(124,92,255,.18); --aur2:rgba(79,140,255,.18); --aur3:rgba(46,230,166,.14);
+  --glass:rgba(255,255,255,.78); --glass-2:rgba(226,232,244,.95);
+  --line:rgba(15,23,42,.09); --text:#0f172a; --muted:#64748b;
   --blue:#2563eb; --violet:#6d4aff; --red:#ef4444; --green:#059669;
   --grad:linear-gradient(135deg,var(--blue) 0%,var(--violet) 100%);
-  --glow:0 8px 22px rgba(79,100,255,.35);
-  --shadow:0 8px 22px rgba(90,110,150,.18), inset 0 1px 0 rgba(255,255,255,.95);
-  --frame-shadow:0 30px 70px rgba(70,90,130,.28);
+  --glow:0 8px 22px rgba(79,100,255,.32);
+  --shadow:0 8px 22px rgba(90,110,150,.15), inset 0 1px 0 rgba(255,255,255,.95);
+  --frame-shadow:none;
   --dpad-bg:radial-gradient(circle at 30% 25%,#ffffff,#e6ecf7 70%);
-  --dpad-shadow:0 18px 38px rgba(90,110,150,.28),inset 0 1px 0 #fff,inset 0 -6px 14px rgba(150,165,195,.25);
+  --dpad-shadow:0 18px 38px rgba(90,110,150,.24),inset 0 1px 0 #fff,inset 0 -6px 14px rgba(150,165,195,.2);
   --dpad-ring:rgba(15,23,42,.08);
   --pad-bg:linear-gradient(160deg,#ffffff,#e8eef9);
   --pad-dots:rgba(37,99,235,.28); --pad-text:#8a97b5;
-  --pad-shadow:inset 0 3px 12px rgba(120,140,180,.28);
+  --pad-shadow:inset 0 3px 12px rgba(120,140,180,.25);
   --sheet-bg:linear-gradient(180deg,#ffffff,#f1f5fb);
-  --overlay:rgba(30,41,70,.35);
-  --toast-bg:rgba(255,255,255,.96);
+  --overlay:rgba(30,41,70,.45);
+  --toast-bg:rgba(255,255,255,.92);
+  --toast-border:rgba(15,23,42,.12);
   --field-bg:#ffffff;
-  --power-glow:0 0 18px rgba(239,68,68,.18);
-  --status-bg:rgba(5,150,105,.10); --status-line:rgba(5,150,105,.25);
+  --power-glow:0 0 18px rgba(239,68,68,.2);
+  --status-bg:rgba(100,116,139,.12); --status-line:rgba(100,116,139,.22);
+  --status-color:var(--muted);
   --orig-body-bg:#e2e8f0;
   --orig-card-border:#cbd5e1;
   --orig-btn-bg:#f8fafc;
@@ -62,259 +66,306 @@
 
 *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
   font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-html,body{height:100%}
-body{background:var(--body-bg);display:flex;justify-content:center;align-items:center;overflow:hidden;transition:background .4s}
+html,body{height:100%;width:100%;overflow:hidden}
+body{background:var(--body-bg);display:flex;justify-content:center;align-items:stretch;transition:background .35s}
 button{color:inherit;border:none;background:none;cursor:pointer;touch-action:manipulation}
-svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:middle;flex-shrink:0}
 
-.remote{position:relative;width:100%;max-width:420px;height:100dvh;max-height:920px;padding:12px 16px 0;
-  display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;color:var(--text);
+/* 1. Full-Screen Edge-to-Edge Container Fix */
+.remote{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  max-width:none;
+  max-height:none;
+  border-radius:0;
+  box-shadow:none;
+  padding:calc(8px + env(safe-area-inset-top, 0px)) 16px 0;
+  display:flex;flex-direction:column;justify-content:space-between;
+  overflow:hidden;color:var(--text);
   background:
    radial-gradient(420px 320px at 85% -5%,var(--aur1),transparent 70%),
    radial-gradient(380px 300px at -10% 35%,var(--aur2),transparent 70%),
    radial-gradient(360px 300px at 100% 95%,var(--aur3),transparent 70%),
    var(--bg);
-  border-radius:38px;box-shadow:var(--frame-shadow),0 0 0 1px var(--line);transition:background .4s,color .3s}
-@media(max-width:430px){.remote{border-radius:0;max-height:none;box-shadow:none}}
+  transition:background .35s,color .3s;
+}
 
-.glass{background:var(--glass);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:background .3s,border-color .3s,box-shadow .3s}
-.press{transition:transform .12s ease,box-shadow .2s ease,background .2s ease}
-.press:active,.press.down{transform:scale(.94);background:var(--glass-2)}
+.glass{background:var(--glass);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:background .25s,border-color .25s,box-shadow .25s}
+.press{transition:transform .12s cubic-bezier(.2,0,0,1),box-shadow .15s ease,background .15s ease}
+.press:active,.press.down{transform:scale(.93);background:var(--glass-2)}
 
 .main-view-container{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;justify-content:space-between;scrollbar-width:none}
 .main-view-container::-webkit-scrollbar{display:none}
-.tab-content{display:none;flex-direction:column;flex:1;justify-content:space-between;animation:fadeIn .3s ease}
+.tab-content{display:none;flex-direction:column;flex:1;justify-content:space-between;animation:fadeIn .25s ease}
 .tab-content.active{display:flex}
-@keyframes fadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.99)}to{opacity:1;transform:none}}
 
 /* Header */
-.top{display:flex;align-items:center;justify-content:space-between;height:46px;gap:8px;margin-bottom:4px}
-.round{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.top{display:flex;align-items:center;justify-content:space-between;height:48px;gap:8px;margin-bottom:4px;flex-shrink:0}
+.round{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:20px;flex-shrink:0}
 .round.power{color:var(--red);box-shadow:var(--shadow),var(--power-glow)}
-.round.pair{color:var(--blue)}
-.tv-info{text-align:center;min-width:0}
-.tv-title{font-size:12px;font-weight:700;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tv-status{display:inline-flex;align-items:center;gap:6px;margin-top:2px;font-size:10px;color:var(--green);font-weight:700;
-  padding:2px 8px;border-radius:20px;background:var(--status-bg);border:1px solid var(--status-line)}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite}
+.round.pair{color:var(--muted)}
+.round.pair.active{color:var(--blue)}
+.tv-info{text-align:center;min-width:0;flex:1}
+.tv-title{font-size:13px;font-weight:700;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-status{display:inline-flex;align-items:center;gap:6px;margin-top:2px;font-size:10px;color:var(--status-color);font-weight:700;
+  padding:2px 8px;border-radius:20px;background:var(--status-bg);border:1px solid var(--status-line);transition:all .3s}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:none;transition:all .3s}
+.tv-status.connected{--status-color:var(--green);--status-bg:rgba(46,230,166,.12);--status-line:rgba(46,230,166,.3)}
+.tv-status.connected .dot{box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite}
 @keyframes pulse{50%{opacity:.35;transform:scale(.8)}}
 
 /* Mode Pill */
-.mode{position:relative;display:flex;height:42px;padding:3px;border-radius:30px;margin:4px 0 8px}
-.mode-bg{position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:36px;border-radius:26px;background:var(--grad);box-shadow:var(--glow);transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
+.mode{position:relative;display:flex;height:40px;padding:3px;border-radius:30px;margin:3px 0 6px;flex-shrink:0}
+.mode-bg{position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:34px;border-radius:24px;background:var(--grad);box-shadow:var(--glow);transition:transform .32s cubic-bezier(.3,1.3,.5,1)}
 .mode.touch .mode-bg{transform:translateX(100%)}
-.mode-btn{position:relative;z-index:1;flex:1;font-size:12.5px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;transition:color .25s}
+.mode-btn{position:relative;z-index:1;flex:1;font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;transition:color .25s}
 .mode-btn.active{color:#fff}
 
 /* Stage */
-.stage{position:relative;height:240px;width:100%}
+.stage{position:relative;height:232px;width:100%;flex-shrink:0}
 .panel{position:absolute;inset:0;display:flex}
 #viewDpad{align-items:center;justify-content:space-between}
 #viewTouch{display:none;flex-direction:column;justify-content:stretch}
 
-.cap{width:62px;height:230px;border-radius:34px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:5px 0}
-.cap-btn{width:52px;height:70px;border-radius:26px;display:grid;place-items:center;font-size:22px;color:var(--text)}
+.cap{width:62px;height:224px;border-radius:32px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:5px 0}
+.cap-btn{width:52px;height:68px;border-radius:24px;display:grid;place-items:center;font-size:22px;color:var(--text)}
 .cap-btn.hot{background:var(--grad);box-shadow:var(--glow);color:#fff}
-.cap-btn.hot:active{filter:brightness(1.12);transform:scale(.94)}
-.cap-tag{font-size:10.5px;font-weight:800;letter-spacing:1.5px;color:var(--muted);padding:5px 8px;border-radius:12px}
+.cap-btn.hot:active{filter:brightness(1.12);transform:scale(.93)}
+.cap-tag{font-size:10.5px;font-weight:800;letter-spacing:1.5px;color:var(--muted);padding:4px 8px;border-radius:12px}
 
 /* D-Pad */
-.dpad{position:relative;width:216px;height:216px;border-radius:50%;background:var(--dpad-bg);border:1px solid var(--line);box-shadow:var(--dpad-shadow);transition:.3s}
+.dpad{position:relative;width:212px;height:212px;border-radius:50%;background:var(--dpad-bg);border:1px solid var(--line);box-shadow:var(--dpad-shadow);transition:.3s}
 .dpad::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed var(--dpad-ring)}
 .dp{position:absolute;display:grid;place-items:center;font-size:18px;color:var(--text);border-radius:18px;transition:.12s}
 .dp:active,.dp.down{color:var(--blue);transform:scale(.88);text-shadow:0 0 12px var(--blue)}
-.dp.u{top:8px;left:50%;margin-left:-32px;width:64px;height:46px}
-.dp.d{bottom:8px;left:50%;margin-left:-32px;width:64px;height:46px}
-.dp.l{left:8px;top:50%;margin-top:-32px;width:46px;height:64px}
-.dp.r{right:8px;top:50%;margin-top:-32px;width:46px;height:64px}
-.ok{position:absolute;top:50%;left:50%;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;background:var(--grad);
-  color:#fff;font-size:16px;font-weight:800;letter-spacing:1px;box-shadow:var(--glow),inset 0 2px 0 rgba(255,255,255,.35);transition:transform .12s}
+.dp.u{top:8px;left:50%;margin-left:-32px;width:64px;height:44px}
+.dp.d{bottom:8px;left:50%;margin-left:-32px;width:64px;height:44px}
+.dp.l{left:8px;top:50%;margin-top:-32px;width:44px;height:64px}
+.dp.r{right:8px;top:50%;margin-top:-32px;width:44px;height:64px}
+.ok{position:absolute;top:50%;left:50%;width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:50%;background:var(--grad);
+  color:#fff;font-size:15px;font-weight:800;letter-spacing:1px;box-shadow:var(--glow),inset 0 2px 0 rgba(255,255,255,.35);transition:transform .12s}
 .ok:active{transform:scale(.92);filter:brightness(1.12)}
 
-/* Full-Size Expanded Touchpad (No Bottom Bar) */
-.pad{position:relative;height:100%;width:100%;border-radius:26px;overflow:hidden;display:grid;place-items:center;touch-action:none;
+/* Full-Size Touchpad */
+.pad{position:relative;height:100%;width:100%;border-radius:24px;overflow:hidden;display:grid;place-items:center;touch-action:none;
   background:radial-gradient(var(--pad-dots) 1.4px,transparent 1.5px) 0 0/18px 18px,var(--pad-bg);
   border:1px solid var(--line);box-shadow:var(--pad-shadow);transition:.3s}
 .pad span{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--pad-text);pointer-events:none}
 .pad-dot{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;pointer-events:none;opacity:0;
   background:radial-gradient(circle,rgba(79,140,255,.55),transparent 70%);transition:opacity .2s}
 
-/* Dock (Back, Home, Settings, 123, Mic, Mute, Exit) */
-.dock{display:flex;justify-content:space-between;margin:6px 0 8px;gap:4px}
-.dock-btn{width:45px;height:45px;border-radius:50%;display:grid;place-items:center;font-size:17px;flex-shrink:0}
+/* Dock */
+.dock{display:flex;justify-content:space-between;margin:5px 0 6px;gap:4px;flex-shrink:0}
+.dock-btn{width:43px;height:43px;border-radius:50%;display:grid;place-items:center;font-size:17px;flex-shrink:0}
 .dock-btn.txt{font-size:12px;font-weight:800}
 .dock-btn.voice{color:var(--blue)}
 .dock-btn.mute{color:var(--red)}
 .dock-btn.exit{color:var(--violet)}
 
 /* Media Strip */
-.media{display:flex;align-items:center;padding:5px 8px;border-radius:28px;margin-bottom:8px;gap:2px}
-.m-btn{flex:1;height:38px;border-radius:19px;display:grid;place-items:center;font-size:16px}
-.m-btn.play{color:var(--blue);font-size:20px}
-.comfort{display:flex;align-items:center;gap:4px;height:34px;padding:0 11px;margin-left:4px;border-radius:18px;font-size:11.5px;font-weight:800;color:#fff;background:var(--grad);box-shadow:var(--glow)}
+.media{display:flex;align-items:center;padding:4px 8px;border-radius:26px;margin-bottom:6px;gap:2px;flex-shrink:0}
+.m-btn{flex:1;height:36px;border-radius:18px;display:grid;place-items:center;font-size:15px}
+.m-btn.play{color:var(--blue);font-size:18px}
+.comfort{display:flex;align-items:center;gap:4px;height:32px;padding:0 10px;margin-left:4px;border-radius:16px;font-size:11px;font-weight:800;color:#fff;background:var(--grad);box-shadow:var(--glow)}
 .comfort:active{transform:scale(.94)}
 
-/* Pinned Favorites (No "View All") */
-.apps-title{display:flex;align-items:center;font-size:10.5px;font-weight:800;letter-spacing:1.2px;color:var(--muted);margin-bottom:6px}
-.fav-grid{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(2,auto);gap:8px;margin-bottom:6px}
+/* Pinned Favorites Dynamic Container */
+.apps-drawer{flex:1;display:flex;flex-direction:column;min-height:90px;margin-bottom:4px}
+.apps-title{display:flex;align-items:center;font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--muted);margin-bottom:6px}
+.fav-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:1}
+.fav-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:16px 10px;border-radius:18px;border:1px dashed var(--line);color:var(--muted);font-size:11px;font-weight:600;gap:4px}
 .fav-app{padding:6px 4px;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px}
-.fav-app .badge{width:38px;height:38px;border-radius:12px;font-size:13px}
+.fav-app .badge{width:36px;height:36px;border-radius:12px;font-size:13px}
 .fav-app b{font-size:9.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55px}
 
 /* App Badges */
-.badge{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.3)}
-.yt{background:linear-gradient(135deg,#ff3b3b,#c40000)}
-.nf{background:linear-gradient(135deg,#f0101c,#8a0008);font-size:20px}
-.pr{background:linear-gradient(135deg,#1ec0ff,#0075c9);font-size:11px}
-.br{background:linear-gradient(135deg,#5b9bff,#2a5fd6)}
-.sp{background:linear-gradient(135deg,#2ee27a,#0f8f44)}
-.ap{background:linear-gradient(135deg,#ff9900,#d47a00)}
-.ds{background:linear-gradient(135deg,#113ccf,#072288);font-size:11px}
-.hb{background:linear-gradient(135deg,#7e22ce,#4c1d95);font-size:11px}
-.at{background:linear-gradient(135deg,#1f2937,#111827);font-size:11px}
-.ps{background:linear-gradient(135deg,#0284c7,#0369a1);font-size:12px}
+.badge{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;
+  box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.3);background:linear-gradient(135deg,var(--blue),var(--violet));overflow:hidden}
+.badge img{width:100%;height:100%;object-fit:cover}
 
 /* ============ TAB 2: APPS DRAWER ============ */
 .all-apps-page{padding:4px 0 10px;display:flex;flex-direction:column;gap:12px}
 .apps-search-bar{position:relative}
-.apps-search-input{width:100%;padding:12px 14px 12px 38px;border-radius:18px;border:1px solid var(--line);background:var(--field-bg);color:var(--text);font-size:13px;outline:none}
+.apps-search-input{width:100%;padding:11px 14px 11px 38px;border-radius:18px;border:1px solid var(--line);background:var(--field-bg);color:var(--text);font-size:13px;outline:none}
 .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted)}
-.all-apps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.full-app-card{padding:12px 6px 10px;border-radius:20px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
-.full-app-card b{font-size:11px;font-weight:700;color:var(--text)}
+.all-apps-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.app-card-row{padding:10px 12px;border-radius:18px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.app-card-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;cursor:pointer}
+.app-card-left b{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.star-btn{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:17px;color:var(--muted);flex-shrink:0;transition:all .2s}
+.star-btn.pinned{color:#f59e0b;transform:scale(1.1)}
+.apps-empty-state{text-align:center;padding:40px 16px;color:var(--muted);font-size:12px;line-height:1.6}
 
-/* ============ TAB 3: CAST HUB (MATCHING REFERENCE IMAGE 1) ============ */
-.cast-page{padding:8px 6px 12px;display:flex;flex-direction:column;height:100%;justify-content:space-between}
+/* ============ TAB 3: CAST HUB ============ */
+.cast-page{padding:8px 4px 12px;display:flex;flex-direction:column;height:100%;justify-content:space-between}
 .cast-head-sec{margin-bottom:12px}
 .cast-page-title{font-size:22px;font-weight:800;letter-spacing:-0.3px}
 .cast-page-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .cast-page-sub span{color:var(--blue);font-weight:600}
-.cast-grid-box{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 12px;margin-top:16px}
+.cast-grid-box{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 10px;margin-top:16px}
 .cast-tile{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;text-align:center}
-.cast-tile-icon{width:64px;height:64px;border-radius:22px;background:var(--glass);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;place-items:center;font-size:26px;color:var(--blue);transition:all .15s}
+.cast-tile-icon{width:62px;height:62px;border-radius:22px;background:var(--glass);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;place-items:center;font-size:24px;color:var(--blue);transition:all .15s}
 .cast-tile:active .cast-tile-icon{transform:scale(.92);box-shadow:var(--glow)}
 .cast-tile span{font-size:11px;font-weight:600;color:var(--text);line-height:1.2}
 .cast-mini-media{margin-top:auto;padding:10px 14px;border-radius:22px;display:flex;align-items:center;gap:12px}
-.cast-mini-thumb{width:44px;height:44px;border-radius:10px;background:#1e293b;object-fit:cover}
+.cast-mini-thumb{width:42px;height:42px;border-radius:10px;background:#1e293b;object-fit:cover}
 .cast-mini-info{flex:1;min-width:0}
 .cast-mini-info div{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cast-mini-ctrls{display:flex;gap:12px;color:var(--blue);font-size:18px}
 
-/* ============ TAB 4: ORIGINAL SAMSUNG REMOTE (MATCHING REFERENCE IMAGE 2) ============ */
-.original-remote-wrapper{display:flex;justify-content:center;padding:4px 0 12px;height:100%;overflow-y:auto}
-.orig-casing{width:235px;background:var(--orig-body-bg);border-radius:36px;padding:16px 14px 20px;border:2px solid var(--orig-card-border);
-  box-shadow:0 18px 45px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1);display:flex;flex-direction:column;gap:8px;position:relative}
-.orig-row{display:flex;justify-content:space-between;gap:6px}
-.orig-key{flex:1;height:34px;background:var(--orig-btn-bg);color:var(--text);border-radius:8px;font-size:11px;font-weight:800;display:grid;place-items:center;border:1px solid var(--line);box-shadow:0 2px 4px rgba(0,0,0,.25)}
+/* ============ TAB 4: ORIGINAL PHYSICAL SAMSUNG REMOTE (COMPACT & OPTIMIZED) ============ */
+.original-remote-wrapper{display:flex;justify-content:center;padding:2px 0 10px;height:100%;overflow-y:auto}
+.orig-casing{width:260px;background:var(--orig-body-bg);border-radius:32px;padding:14px 12px 18px;border:2px solid var(--orig-card-border);
+  box-shadow:0 18px 45px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px;position:relative}
+.orig-row{display:flex;justify-content:space-between;gap:5px}
+.orig-key{flex:1;height:32px;background:var(--orig-btn-bg);color:var(--text);border-radius:8px;font-size:10.5px;font-weight:800;display:grid;place-items:center;border:1px solid var(--line);box-shadow:0 2px 4px rgba(0,0,0,.25)}
 .orig-key:active{filter:brightness(1.2);transform:scale(.95)}
-.orig-key.pwr{background:#e11d48;color:#fff;border-color:#f43f5e;box-shadow:0 3px 10px rgba(225,29,72,.4)}
-.orig-key.src{font-size:9.5px}
-.orig-key.num{font-size:14px;height:36px}
+.orig-key.pwr{background:#e11d48;color:#fff;border-color:#f43f5e;box-shadow:0 3px 10px rgba(225,29,72,.4);font-size:15px}
+.orig-key.src{font-size:9px}
+.orig-key.num{font-size:13px;height:34px}
 .orig-key.sub{font-size:8.5px}
 
-.orig-stick-cluster{display:flex;gap:8px;align-items:stretch;margin:4px 0}
-.orig-vol-stick,.orig-ch-stick{flex:1;background:var(--orig-btn-bg);border-radius:18px;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:4px 0;height:108px}
-.orig-stick-btn{width:100%;height:38px;display:grid;place-items:center;font-size:20px;font-weight:800}
-.orig-stick-lbl{font-size:10px;font-weight:800;color:var(--muted)}
-.orig-mid-col{width:46px;display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+.orig-stick-cluster{display:flex;gap:6px;align-items:stretch;margin:2px 0}
+.orig-vol-stick,.orig-ch-stick{flex:1;background:var(--orig-btn-bg);border-radius:16px;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:3px 0;height:98px}
+.orig-stick-btn{width:100%;height:35px;display:grid;place-items:center;font-size:18px;font-weight:800}
+.orig-stick-lbl{font-size:9.5px;font-weight:800;color:var(--muted)}
+.orig-mid-col{width:48px;display:flex;flex-direction:column;justify-content:space-between;gap:5px}
 
-/* Original Samsung D-Pad Cross Shape */
-.orig-cross-nav{position:relative;width:160px;height:160px;margin:6px auto}
-.oc-btn{position:absolute;background:var(--orig-btn-bg);border:1px solid var(--line);color:var(--text);font-size:13px;display:grid;place-items:center}
-.oc-btn:active{background:var(--blue);color:#fff}
-.oc-u{top:0;left:50px;width:60px;height:42px;border-radius:14px 14px 4px 4px}
-.oc-d{bottom:0;left:50px;width:60px;height:42px;border-radius:4px 4px 14px 14px}
-.oc-l{left:0;top:50px;width:42px;height:60px;border-radius:14px 4px 4px 14px}
-.oc-r{right:0;top:50px;width:42px;height:60px;border-radius:4px 14px 14px 4px}
-.oc-enter{position:absolute;top:50px;left:50px;width:60px;height:60px;background:var(--orig-btn-bg);border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800}
+/* SLIM D-PAD SECTION WITH FLANKING BUTTONS */
+.orig-nav-cluster{display:flex;flex-direction:column;gap:5px;margin:2px 0}
+.orig-nav-row{display:flex;gap:5px;align-items:stretch;height:36px}
+.orig-nav-row.mid{height:42px}
+.orig-side-btn{flex:1;background:var(--orig-btn-bg);color:var(--text);border-radius:8px;border:1px solid var(--line);font-size:8.5px;font-weight:800;display:grid;place-items:center}
+.orig-side-btn:active{filter:brightness(1.2);transform:scale(.95)}
+.orig-arrow-btn{width:68px;background:var(--orig-btn-bg);color:var(--text);border-radius:8px;border:1px solid var(--line);font-size:14px;display:grid;place-items:center}
+.orig-arrow-btn:active{background:var(--blue);color:#fff}
+.orig-enter-btn{flex:1;background:var(--orig-btn-bg);color:var(--text);border-radius:8px;border:1px solid var(--line);font-size:12px;font-weight:800;display:grid;place-items:center}
+.orig-enter-btn:active{background:var(--blue);color:#fff}
 
-.orig-color-bar{display:flex;gap:6px;margin:2px 0}
-.orig-c-pill{flex:1;height:15px;border-radius:4px;font-size:9px;font-weight:900;color:#fff;display:grid;place-items:center}
+.orig-color-bar{display:flex;gap:5px;margin:2px 0}
+.orig-c-pill{flex:1;height:16px;border-radius:4px;font-size:9px;font-weight:900;color:#fff;display:grid;place-items:center}
 .oc-a{background:#ef4444} .oc-b{background:#10b981} .oc-c{background:#f59e0b} .oc-d{background:#3b82f6}
 
 /* ============ TAB 5: SETTINGS ============ */
-.settings-page{padding:8px 0;display:flex;flex-direction:column;gap:14px}
-.set-card{padding:16px;border-radius:22px;display:flex;flex-direction:column;gap:12px}
+.settings-page{padding:6px 0 14px;display:flex;flex-direction:column;gap:12px}
+.set-card{padding:14px;border-radius:20px;display:flex;flex-direction:column;gap:10px}
 .set-row{display:flex;align-items:center;justify-content:space-between}
-.set-title{font-size:14px;font-weight:700}
+.set-title{font-size:13.5px;font-weight:700}
 .set-desc{font-size:11px;color:var(--muted)}
-.color-picker{display:flex;gap:10px}
-.col-dot{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent}
-.col-dot.active{border-color:#fff;transform:scale(1.1)}
+
+/* Clean Theme Toggle Button (No icon overlapping) */
+.theme-toggle-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;color:var(--text);background:var(--glass-2);border:1px solid var(--line)}
+.theme-toggle-btn svg{font-size:16px;color:var(--blue)}
+
+/* 8 Premium Palette Dots */
+.color-picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px}
+.col-card{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer}
+.col-dot{width:36px;height:36px;border-radius:50%;border:2px solid transparent;box-shadow:0 4px 10px rgba(0,0,0,.25);transition:all .2s}
+.col-card.active .col-dot{border-color:#fff;transform:scale(1.12);box-shadow:0 0 14px var(--blue)}
+.col-card span{font-size:9.5px;font-weight:700;color:var(--muted)}
+.col-card.active span{color:var(--text)}
+
+/* Field and Buttons */
+.field{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--field-bg);color:var(--text);font-size:13px;outline:none}
+.btn{width:100%;padding:12px;border-radius:14px;font-size:13px;font-weight:700;color:#fff;background:var(--grad);box-shadow:var(--glow)}
+.btn.gray{background:var(--glass-2);box-shadow:none;color:var(--muted)}
 
 /* ============ BOTTOM NAVIGATION BAR (5 TABS) ============ */
-.bottom-nav{height:58px;margin:0 -16px;padding:4px 10px calc(4px + env(safe-area-inset-bottom));background:var(--sheet-bg);
-  border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;z-index:90}
-.nav-tab{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);cursor:pointer;padding:4px 10px;border-radius:14px;transition:all .2s}
+.bottom-nav{height:56px;margin:0 -16px;padding:4px 10px calc(4px + env(safe-area-inset-bottom, 0px));background:var(--sheet-bg);
+  border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;z-index:90;flex-shrink:0}
+.nav-tab{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);cursor:pointer;padding:4px 12px;border-radius:14px;transition:all .2s}
 .nav-tab svg{font-size:18px}
 .nav-tab span{font-size:10px;font-weight:700}
 .nav-tab.active{color:var(--blue);transform:translateY(-1px)}
 .nav-tab.active svg{filter:drop-shadow(0 2px 8px var(--blue))}
 
 /* Splash Screen */
-.splash{position:absolute;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);transition:opacity .5s}
-.splash::before{content:"";position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,var(--aur1),transparent 70%);filter:blur(10px);animation:breathe 3s infinite}
-@keyframes breathe{50%{transform:scale(1.25);opacity:.7}}
-.logo{position:relative;width:92px;height:92px;border-radius:30px;display:grid;place-items:center;font-size:42px;color:#fff;background:var(--grad);box-shadow:var(--glow);margin-bottom:20px;animation:pop .7s cubic-bezier(.3,1.5,.5,1)}
-@keyframes pop{from{transform:scale(.4);opacity:0}}
+.splash{position:absolute;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);transition:opacity .4s}
+.splash::before{content:"";position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,var(--aur1),transparent 70%);filter:blur(10px);animation:breathe 3s infinite}
+@keyframes breathe{50%{transform:scale(1.2);opacity:.7}}
+.logo{position:relative;width:86px;height:86px;border-radius:28px;display:grid;place-items:center;font-size:38px;color:#fff;background:var(--grad);box-shadow:var(--glow);margin-bottom:18px}
 .s-title{position:relative;font-size:20px;font-weight:800;letter-spacing:.6px}
 .s-sub{position:relative;margin-top:6px;font-size:13px;font-weight:600;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.loader{position:relative;margin-top:26px;width:130px;height:3px;border-radius:3px;background:var(--glass-2);overflow:hidden}
+.loader{position:relative;margin-top:24px;width:120px;height:3px;border-radius:3px;background:var(--glass-2);overflow:hidden}
 .loader::after{content:"";position:absolute;inset:0;width:45%;border-radius:3px;background:var(--grad);animation:slide 1.1s infinite ease-in-out}
 @keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(230%)}}
 
-/* Modals & Full Pairing Sheet (Matching Reference Image 3) */
+/* Modals */
 .layer{position:absolute;inset:0;z-index:100;display:none;align-items:flex-end;background:var(--overlay);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .layer.show{display:flex;animation:fade .25s}
 @keyframes fade{from{opacity:0}}
-.sheet{width:100%;max-height:85vh;overflow-y:auto;padding:12px 20px 28px;border-radius:32px 32px 0 0;background:var(--sheet-bg);border:1px solid var(--line);box-shadow:0 -10px 30px rgba(0,0,0,.3);animation:up .35s cubic-bezier(.2,1,.3,1)}
+.sheet{width:100%;max-height:85vh;overflow-y:auto;padding:12px 18px 24px;border-radius:28px 28px 0 0;background:var(--sheet-bg);border:1px solid var(--line);box-shadow:0 -10px 30px rgba(0,0,0,.3);animation:up .32s cubic-bezier(.2,1,.3,1)}
 @keyframes up{from{transform:translateY(100%)}}
-.grab{width:42px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 16px}
+.grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 14px}
 
 /* Pairing Components */
-.pair-hero-card{background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(124,58,237,.25));border:1px solid var(--line);border-radius:24px;padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:14px}
-.pair-hero-icon{width:48px;height:48px;border-radius:18px;background:var(--grad);display:grid;place-items:center;font-size:22px;color:#fff;box-shadow:var(--glow);flex-shrink:0}
-.pair-hero-text h4{font-size:15px;font-weight:800}
+.pair-hero-card{background:linear-gradient(135deg,rgba(99,102,241,.2),rgba(124,58,237,.2));border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.pair-hero-icon{width:44px;height:44px;border-radius:16px;background:var(--grad);display:grid;place-items:center;font-size:20px;color:#fff;box-shadow:var(--glow);flex-shrink:0}
+.pair-hero-text h4{font-size:14.5px;font-weight:800}
 .pair-hero-text p{font-size:11px;color:var(--muted);margin-top:2px}
-
-.pair-sec-head{font-size:12px;font-weight:800;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px}
-.pair-box{background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.pair-sec-head{font-size:11.5px;font-weight:800;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px}
+.pair-box{background:var(--glass);border:1px solid var(--line);border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
 .pair-tv-item{display:flex;align-items:center;justify-content:space-between}
-.pair-tv-meta{display:flex;align-items:center;gap:12px}
-.pair-tv-avatar{width:42px;height:42px;border-radius:14px;background:var(--glass-2);display:grid;place-items:center;font-size:20px;color:var(--blue)}
-.pair-tv-txt h5{font-size:13px;font-weight:800}
-.pair-tv-txt span{font-size:11px;color:var(--green);font-weight:600}
+.pair-tv-meta{display:flex;align-items:center;gap:10px}
+.pair-tv-avatar{width:38px;height:38px;border-radius:12px;background:var(--glass-2);display:grid;place-items:center;font-size:18px;color:var(--blue)}
+.pair-tv-txt h5{font-size:12.5px;font-weight:800}
+.pair-tv-txt span{font-size:10.5px;color:var(--muted);font-weight:600}
 .pair-btn-row{display:flex;gap:8px}
-.pair-pill-btn{flex:1;height:38px;border-radius:16px;font-size:12px;font-weight:700;display:grid;place-items:center;border:1px solid var(--line);cursor:pointer}
+.pair-pill-btn{flex:1;height:36px;border-radius:14px;font-size:11.5px;font-weight:700;display:grid;place-items:center;border:1px solid var(--line);cursor:pointer}
 .pair-pill-btn.primary{background:var(--grad);color:#fff;box-shadow:var(--glow);border:none}
 .pair-pill-btn.secondary{background:var(--glass-2);color:var(--text)}
 
-.field{width:100%;padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:var(--field-bg);color:var(--text);font-size:14px;margin-bottom:12px;outline:none}
-.btn{flex:1;padding:14px;border-radius:16px;font-size:14px;font-weight:700;color:#fff;background:var(--grad);box-shadow:var(--glow)}
-.btn.gray{background:var(--glass-2);box-shadow:none;width:100%;color:var(--muted)}
-.numgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-.num{height:54px;border-radius:18px;font-size:19px;font-weight:700;display:grid;place-items:center;color:var(--text)}
-.num.s{font-size:12px;color:var(--muted)}
+/* Numpad */
+.numgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.num{height:50px;border-radius:16px;font-size:18px;font-weight:700;display:grid;place-items:center;color:var(--text)}
+.num.s{font-size:11.5px;color:var(--muted)}
 
-.toast{position:absolute;left:50%;bottom:80px;transform:translate(-50%,20px);padding:9px 16px;border-radius:20px;font-size:12px;font-weight:700;
-  background:var(--toast-bg);border:1px solid var(--line);box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.3s;z-index:200;white-space:nowrap}
-.toast.show{opacity:1;transform:translate(-50%,0)}
+/* 6. Modern Glass Floating Toast */
+.toast{
+  position:absolute;
+  left:50%;
+  bottom:76px;
+  transform:translate(-50%,24px) scale(.92);
+  padding:10px 18px;
+  border-radius:24px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--text);
+  background:var(--toast-bg);
+  border:1px solid var(--toast-border);
+  box-shadow:0 12px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.2);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  opacity:0;
+  pointer-events:none;
+  transition:all .28s cubic-bezier(.2,1,.3,1);
+  z-index:900;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
 </style>
 </head>
 <body>
 
-<!-- SVG Icon Sprite -->
-<svg width="0" height="0" style="position:absolute"><defs>
-<symbol id="power" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></symbol>
-<symbol id="cast" viewBox="0 0 24 24"><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><circle cx="2.5" cy="20" r=".8"/></symbol>
+<!-- Robust SVG Sprite with Proper viewBox & Stroke Attributes -->
+<svg width="0" height="0" style="position:absolute;display:none"><defs>
+<symbol id="power" viewBox="0 0 24 24"><path d="M12 2v10" stroke-width="2.5"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0" stroke-width="2.5"/></symbol>
+<symbol id="cast" viewBox="0 0 24 24"><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><circle cx="2.5" cy="20" r=".8" fill="currentColor"/></symbol>
 <symbol id="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
 <symbol id="moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
-<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-<symbol id="minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
-<symbol id="up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
-<symbol id="down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
-<symbol id="left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
-<symbol id="right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-width="2.5"/></symbol>
+<symbol id="minus" viewBox="0 0 24 24"><path d="M5 12h14" stroke-width="2.5"/></symbol>
+<symbol id="up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6" stroke-width="2.5"/></symbol>
+<symbol id="down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" stroke-width="2.5"/></symbol>
+<symbol id="left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" stroke-width="2.5"/></symbol>
+<symbol id="right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" stroke-width="2.5"/></symbol>
 <symbol id="back" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
 <symbol id="home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></symbol>
 <symbol id="menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
@@ -344,25 +395,30 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
 </defs></svg>
 
+<!-- 1. Full-Screen Edge-to-Edge Container -->
 <div class="remote" id="remote">
 
   <!-- Splash Screen -->
   <div id="splashScreen" class="splash">
-    <div class="logo"><svg class="i" style="width:44px;height:44px"><use href="#tv"/></svg></div>
-    <div class="s-title">Samsung Remote</div>
+    <div class="logo"><svg class="i" style="width:42px;height:42px"><use href="#tv"/></svg></div>
+    <div class="s-title">Samsung Remote Pro</div>
     <div class="s-sub">Made by M.R.I Ratul</div>
     <div class="loader"></div>
   </div>
 
-  <!-- Header -->
+  <!-- Header with Dynamic Connection State -->
   <div class="top">
-    <button class="round glass press power" data-key="KEY_POWER" title="Power"><svg class="i"><use href="#power"/></svg></button>
+    <button class="round glass press power" data-key="KEY_POWER" title="Power">
+      <svg class="i" style="width:20px;height:20px;overflow:visible"><use href="#power"/></svg>
+    </button>
     <div class="tv-info">
-      <div class="tv-title">[TV] Samsung 4 Series (32)</div>
-      <div class="tv-status"><span class="dot"></span><span id="statusIp">Connected · 192.168.0.101</span></div>
+      <div class="tv-title" id="headerTvName">No TV Connected</div>
+      <div class="tv-status" id="headerTvBadge"><span class="dot"></span><span id="statusIp">Disconnected</span></div>
     </div>
     <div class="right">
-      <button class="round glass press pair" onclick="openModal('pairingModal')" title="Pairing"><svg class="i"><use href="#cast"/></svg></button>
+      <button class="round glass press pair" id="pairHeaderBtn" onclick="openModal('pairingModal')" title="Pairing">
+        <svg class="i"><use href="#cast"/></svg>
+      </button>
     </div>
   </div>
 
@@ -401,7 +457,7 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
           </div>
         </div>
 
-        <!-- Full-Size Touchpad Panel (No Left Click Bar, Direct Tap to Click) -->
+        <!-- Full-Size Touchpad Panel -->
         <div id="viewTouch" class="panel">
           <div id="touchMatrix" class="pad">
             <span>SWIPE TO MOVE • TAP TO CLICK</span>
@@ -410,7 +466,7 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
         </div>
       </div>
 
-      <!-- 7-Button Dock Bar -->
+      <!-- Dock Bar -->
       <div class="dock">
         <button class="dock-btn glass press" data-key="KEY_RETURN" title="Back"><svg class="i"><use href="#back"/></svg></button>
         <button class="dock-btn glass press" data-key="KEY_HOME" title="Home"><svg class="i"><use href="#home"/></svg></button>
@@ -423,31 +479,25 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 
       <!-- Media Strip -->
       <div class="media glass">
-        <button class="m-btn press" data-key="KEY_STOP"><svg class="i" style="width:14px;height:14px"><use href="#stop"/></svg></button>
+        <button class="m-btn press" data-key="KEY_STOP"><svg class="i" style="width:13px;height:13px"><use href="#stop"/></svg></button>
         <button class="m-btn press" data-key="KEY_REWIND" data-hold><svg class="i"><use href="#rew"/></svg></button>
         <button class="m-btn press play" data-key="KEY_PLAY"><svg class="i"><use href="#play"/></svg></button>
         <button class="m-btn press" data-key="KEY_PAUSE"><svg class="i"><use href="#pause"/></svg></button>
         <button class="m-btn press" data-key="KEY_FF" data-hold><svg class="i"><use href="#ff"/></svg></button>
-        <button class="comfort" onclick="triggerComfortSoundShift()" title="80 to 50 Jump">50 <svg class="i" style="width:13px;height:13px"><use href="#vol"/></svg></button>
+        <button class="comfort" onclick="triggerComfortSoundShift()" title="80 to 50 Jump">50 <svg class="i" style="width:12px;height:12px"><use href="#vol"/></svg></button>
       </div>
 
-      <!-- Pinned Favorites (Clean Title, No "View All") -->
+      <!-- 3. Dynamic Pinned Favorites -->
       <div class="apps-drawer">
         <div class="apps-title">
           <svg class="i" style="width:12px;height:12px;color:var(--blue);margin-right:4px"><use href="#bolt"/></svg>
           PINNED FAVORITES
         </div>
-        <div class="fav-grid">
-          <div class="fav-app glass press" onclick="launchApp('111299001912')"><div class="badge yt"><svg class="i"><use href="#play"/></svg></div><b>YouTube</b></div>
-          <div class="fav-app glass press" onclick="launchApp('3201512006785')"><div class="badge nf">N</div><b>Netflix</b></div>
-          <div class="fav-app glass press" onclick="launchApp('3201512006963')"><div class="badge pr">prime</div><b>Prime</b></div>
-          <div class="fav-app glass press" onclick="launchApp('org.tizen.browser')"><div class="badge br"><svg class="i"><use href="#globe"/></svg></div><b>Internet</b></div>
-          <div class="fav-app glass press" onclick="launchApp('3201606009684')"><div class="badge sp"><svg class="i"><use href="#note"/></svg></div><b>Spotify</b></div>
-          <div class="fav-app glass press" onclick="launchApp('3201907018807')"><div class="badge ap">app</div><b>Apple TV</b></div>
-          <div class="fav-app glass press" onclick="launchApp('3201901017640')"><div class="badge ds">Disney</div><b>Disney+</b></div>
-          <div class="fav-app glass press" onclick="launchApp('3201807016597')"><div class="badge hb">MAX</div><b>HBO Max</b></div>
-          <div class="fav-app glass press" onclick="launchApp('3201710015037')"><div class="badge at">air</div><b>Airtel</b></div>
-          <div class="fav-app glass press" onclick="launchApp('org.tizen.playstore')"><div class="badge ps">Apps</div><b>TV Apps</b></div>
+        <div class="fav-grid" id="pinnedFavGrid">
+          <div class="fav-empty">
+            <span>⭐ No pinned apps yet</span>
+            <span style="font-size:9.5px;opacity:.7">Pin apps from Apps drawer</span>
+          </div>
         </div>
       </div>
     </div>
@@ -460,29 +510,22 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
           <input type="text" class="apps-search-input" placeholder="Search installed apps..." oninput="filterApps(this.value)">
         </div>
         <div class="all-apps-grid" id="allAppsGrid">
-          <div class="full-app-card glass press" onclick="launchApp('111299001912')"><div class="badge yt"><svg class="i"><use href="#play"/></svg></div><b>YouTube</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('3201512006785')"><div class="badge nf">N</div><b>Netflix</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('3201512006963')"><div class="badge pr">prime</div><b>Prime Video</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('org.tizen.browser')"><div class="badge br"><svg class="i"><use href="#globe"/></svg></div><b>Web Browser</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('3201606009684')"><div class="badge sp"><svg class="i"><use href="#note"/></svg></div><b>Spotify</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('3201907018807')"><div class="badge ap">tv</div><b>Apple TV</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('3201901017640')"><div class="badge ds">Disney</div><b>Disney+</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('3201807016597')"><div class="badge hb">MAX</div><b>HBO Max</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('org.tizen.gallery')"><div class="badge" style="background:#ea580c">🌸</div><b>Gallery</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('org.tizen.emanual')"><div class="badge" style="background:#f97316">📖</div><b>e-Manual</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('org.tizen.privacy')"><div class="badge" style="background:#0284c7">🛡</div><b>Privacy</b></div>
-          <div class="full-app-card glass press" onclick="launchApp('org.tizen.playstore')"><div class="badge ps"><svg class="i"><use href="#grid"/></svg></div><b>App Store</b></div>
+          <div class="apps-empty-state" style="grid-column:1/-1">
+            <svg class="i" style="font-size:32px;color:var(--muted);margin-bottom:8px"><use href="#tv"/></svg>
+            <div>No apps loaded from TV</div>
+            <div style="font-size:10px;margin-top:4px">Connect to your Samsung TV to list apps</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ==================== TAB 3: CAST HUB (PICTURE 1 GRID REPLICA) ==================== -->
+    <!-- ==================== TAB 3: CAST HUB ==================== -->
     <div id="tabCast" class="tab-content">
       <div class="cast-page">
         <div>
           <div class="cast-head-sec">
-            <div class="cast-page-title">TV Remote</div>
-            <div class="cast-page-sub">Connect to <span>[TV] Samsung 4 Series (32)</span></div>
+            <div class="cast-page-title">TV Cast Hub</div>
+            <div class="cast-page-sub">Target: <span id="castTvName">No TV Connected</span></div>
           </div>
 
           <div class="cast-grid-box">
@@ -515,10 +558,10 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 
         <!-- Floating Bottom Stream Bar -->
         <div class="cast-mini-media glass">
-          <div class="cast-mini-thumb" style="background:url('https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=100&auto=format&fit=crop&q=60') center/cover"></div>
+          <div class="cast-mini-thumb" style="background:#1e293b url('https://placehold.co/100x100/1e293b/4f8cff?text=Media') center/cover"></div>
           <div class="cast-mini-info">
-            <div>20261028_101920.mp4</div>
-            <span style="font-size:10px;color:var(--green)">Ready to Stream</span>
+            <div id="castMediaTitle">Ready to Cast Media</div>
+            <span style="font-size:10px;color:var(--green)">Stream Ready</span>
           </div>
           <div class="cast-mini-ctrls">
             <span onclick="sendCmd('KEY_REWIND')"><svg class="i"><use href="#rew"/></svg></span>
@@ -529,13 +572,15 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
       </div>
     </div>
 
-    <!-- ==================== TAB 4: ORIGINAL PHYSICAL SAMSUNG REMOTE (PICTURE 2 REPLICA) ==================== -->
+    <!-- ==================== TAB 4: ORIGINAL SAMSUNG REMOTE (SLIM & RECONFIGURED) ==================== -->
     <div id="tabOriginal" class="tab-content">
       <div class="original-remote-wrapper">
         <div class="orig-casing">
           <!-- Top Row: Power & Source -->
           <div class="orig-row">
-            <button class="orig-key pwr" data-key="KEY_POWER">⏻</button>
+            <button class="orig-key pwr" data-key="KEY_POWER">
+              <svg class="i" style="width:16px;height:16px;overflow:visible"><use href="#power"/></svg>
+            </button>
             <button class="orig-key src" data-key="KEY_SOURCE">SOURCE</button>
           </div>
 
@@ -557,8 +602,8 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
               <button class="orig-stick-btn" data-key="KEY_VOLDOWN">—</button>
             </div>
             <div class="orig-mid-col">
-              <button class="orig-key sub" data-key="KEY_MUTE" style="height:50px">MUTE</button>
-              <button class="orig-key sub" data-key="KEY_CHLIST" style="height:50px">CH LIST</button>
+              <button class="orig-key sub" data-key="KEY_MUTE" style="height:46px">MUTE</button>
+              <button class="orig-key sub" data-key="KEY_CHLIST" style="height:46px">CH LIST</button>
             </div>
             <div class="orig-ch-stick">
               <button class="orig-stick-btn" data-key="KEY_CHUP">∧</button>
@@ -567,30 +612,35 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
             </div>
           </div>
 
-          <!-- Function Buttons -->
+          <!-- SETTINGS, HOME, GUIDE Row -->
           <div class="orig-row">
             <button class="orig-key sub" data-key="KEY_MENU">SETTINGS</button>
             <button class="orig-key sub" data-key="KEY_HOME">HOME</button>
             <button class="orig-key sub" data-key="KEY_GUIDE">GUIDE</button>
           </div>
-          <div class="orig-row">
-            <button class="orig-key sub" data-key="KEY_EMANUAL">E-MANUAL</button>
-            <button class="orig-key sub" data-key="KEY_INFO">INFO</button>
-          </div>
 
-          <!-- Cross D-Pad System -->
-          <div class="orig-cross-nav">
-            <button class="oc-btn oc-u" data-key="KEY_UP">▲</button>
-            <button class="oc-btn oc-d" data-key="KEY_DOWN">▼</button>
-            <button class="oc-btn oc-l" data-key="KEY_LEFT">◀</button>
-            <button class="oc-btn oc-r" data-key="KEY_RIGHT">▶</button>
-            <button class="oc-enter" data-key="KEY_ENTER">OK</button>
-          </div>
+          <!-- 4. SLIM ERGONOMIC CLUSTER (E-MANUAL & INFO around UP; RETURN & EXIT around DOWN) -->
+          <div class="orig-nav-cluster">
+            <!-- Row 1: E-MANUAL | UP | INFO -->
+            <div class="orig-nav-row">
+              <button class="orig-side-btn" data-key="KEY_EMANUAL">E-MANUAL</button>
+              <button class="orig-arrow-btn" data-key="KEY_UP">▲</button>
+              <button class="orig-side-btn" data-key="KEY_INFO">INFO</button>
+            </div>
 
-          <!-- Return & Exit -->
-          <div class="orig-row">
-            <button class="orig-key sub" data-key="KEY_RETURN">RETURN</button>
-            <button class="orig-key sub" data-key="KEY_EXIT">EXIT</button>
+            <!-- Row 2: LEFT | ENTER / OK | RIGHT -->
+            <div class="orig-nav-row mid">
+              <button class="orig-arrow-btn" style="width:50px" data-key="KEY_LEFT">◀</button>
+              <button class="orig-enter-btn" data-key="KEY_ENTER">OK</button>
+              <button class="orig-arrow-btn" style="width:50px" data-key="KEY_RIGHT">▶</button>
+            </div>
+
+            <!-- Row 3: RETURN | DOWN | EXIT -->
+            <div class="orig-nav-row">
+              <button class="orig-side-btn" data-key="KEY_RETURN">RETURN</button>
+              <button class="orig-arrow-btn" data-key="KEY_DOWN">▼</button>
+              <button class="orig-side-btn" data-key="KEY_EXIT">EXIT</button>
+            </div>
           </div>
 
           <!-- A B C D Color Buttons -->
@@ -601,10 +651,10 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
             <button class="orig-c-pill oc-d" data-key="KEY_BLUE">D</button>
           </div>
 
-          <!-- Extra Controls -->
+          <!-- PICTURE with KEY_PICTURE_MODE + KEY_PMODE Fallback -->
           <div class="orig-row">
             <button class="orig-key sub" data-key="KEY_ASPECT">PIC SIZE</button>
-            <button class="orig-key sub" data-key="KEY_PICTURE_MODE">PICTURE</button>
+            <button class="orig-key sub" data-key="KEY_PICTURE_MODE" data-alt-key="KEY_PMODE">PICTURE</button>
             <button class="orig-key sub" data-key="KEY_SUB_TITLE">AD/SUBT.</button>
             <button class="orig-key sub" data-key="KEY_STOP">■</button>
           </div>
@@ -621,37 +671,39 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
     <!-- ==================== TAB 5: SETTINGS ==================== -->
     <div id="tabSettings" class="tab-content">
       <div class="settings-page">
+        <!-- 5. Single Clean Dark/Light Mode Button -->
         <div class="set-card glass">
           <div class="set-row">
             <div>
-              <div class="set-title">Dark / Light Mode</div>
-              <div class="set-desc">Switch interface theme styling</div>
+              <div class="set-title">Theme Mode</div>
+              <div class="set-desc">Switch dark or light interface style</div>
             </div>
-            <button class="round glass press theme" onclick="toggleTheme()"><svg class="i sun"><use href="#sun"/></svg><svg class="i moon"><use href="#moon"/></svg></button>
+            <button class="theme-toggle-btn press" id="themeToggleBtn" onclick="toggleTheme()">
+              <svg class="i" id="themeToggleIcon"><use href="#moon"/></svg>
+              <span id="themeToggleText">Dark Mode</span>
+            </button>
           </div>
         </div>
 
+        <!-- 8 Premium Color Palettes -->
         <div class="set-card glass">
           <div>
             <div class="set-title">Accent Gradient Color</div>
-            <div class="set-desc">Personalize app buttons and glowing shadows</div>
+            <div class="set-desc">Select from 8 crafted premium palettes</div>
           </div>
-          <div class="color-picker">
-            <div class="col-dot active" style="background:#4f8cff" onclick="setAccent('#4f8cff','#7c5cff',this)"></div>
-            <div class="col-dot" style="background:#7c5cff" onclick="setAccent('#7c5cff','#c084fc',this)"></div>
-            <div class="col-dot" style="background:#2ee6a6" onclick="setAccent('#10b981','#059669',this)"></div>
-            <div class="col-dot" style="background:#ff4d6a" onclick="setAccent('#ef4444','#b91c1c',this)"></div>
+          <div class="color-picker-grid" id="paletteGrid">
+            <!-- Rendered dynamically -->
           </div>
         </div>
 
         <div class="set-card glass">
           <div class="set-title">TV Network Parameters</div>
-          <input type="text" id="cfgIpField" class="field" value="192.168.0.101" placeholder="Samsung TV IP...">
+          <input type="text" id="cfgIpField" class="field" placeholder="Samsung TV IP (e.g. 192.168.1.50)">
           <button class="btn" onclick="saveTvConfig()">Update IP Configuration</button>
         </div>
 
         <div class="set-card glass" style="text-align:center">
-          <div style="font-size:13px;font-weight:800">Samsung Remote Pro v2.5</div>
+          <div style="font-size:13px;font-weight:800">Samsung Remote Pro v3.0</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">Created &amp; Optimized by M.R.I Ratul</div>
         </div>
       </div>
@@ -683,73 +735,61 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <!-- 6. Modern Glass In-App Toast -->
+  <div class="toast" id="toast">
+    <svg class="i" style="font-size:14px;color:var(--blue)"><use href="#bolt"/></svg>
+    <span id="toastMsg">Ready</span>
+  </div>
 
-  <!-- ==================== FULL PAIRING DASHBOARD MODAL (PICTURE 3 REPLICA) ==================== -->
+  <!-- Dynamic Pairing Modal -->
   <div id="pairingModal" class="layer" onclick="closeModalOnBg(event)">
     <div class="sheet">
       <div class="grab"></div>
 
-      <!-- Hero Card -->
       <div class="pair-hero-card">
         <div class="pair-hero-icon"><svg class="i"><use href="#lock"/></svg></div>
         <div class="pair-hero-text">
           <h4>Pair on your TV</h4>
-          <p>Accept the pairing prompt on the TV to continue.</p>
+          <p>Confirm the connection prompt on your Samsung TV screen.</p>
         </div>
       </div>
 
-      <!-- Saved TVs Section -->
       <div class="pair-sec-head">
-        <span>SAVED TVS</span>
+        <span>CURRENT TV</span>
       </div>
       <div class="pair-box">
         <div class="pair-tv-item">
           <div class="pair-tv-meta">
             <div class="pair-tv-avatar"><svg class="i"><use href="#tv"/></svg></div>
             <div class="pair-tv-txt">
-              <h5>[TV] Samsung 4 Series (32)</h5>
-              <span>192.168.0.101 • power-on ready</span>
+              <h5 id="modalTvName">No TV Connected</h5>
+              <span id="modalTvSub">Disconnected</span>
             </div>
           </div>
           <button style="color:var(--muted)" onclick="disconnectTv()" title="Disconnect TV"><svg class="i"><use href="#trash"/></svg></button>
         </div>
         <div class="pair-btn-row">
           <button class="pair-pill-btn primary" onclick="sendCmd('KEY_POWER')">Power On</button>
-          <button class="pair-pill-btn secondary" onclick="connectTv('192.168.0.101')">Connecting...</button>
+          <button class="pair-pill-btn secondary" id="modalConnectBtn" onclick="reconnectTv()">Connect</button>
         </div>
       </div>
 
-      <!-- On Your Network Section -->
       <div class="pair-sec-head">
-        <span>ON YOUR NETWORK</span>
+        <span>DISCOVER ON NETWORK</span>
         <button style="color:var(--blue)" onclick="scanNetwork()" title="Scan Network"><svg class="i"><use href="#refresh"/></svg></button>
       </div>
-      <div class="pair-box">
-        <div class="pair-tv-item">
-          <div class="pair-tv-meta">
-            <div class="pair-tv-avatar"><svg class="i"><use href="#wifi"/></svg></div>
-            <div class="pair-tv-txt">
-              <h5>[TV] Samsung 4 Series (32)</h5>
-              <span style="color:var(--muted)">192.168.0.101 • UA32N4300</span>
-            </div>
-          </div>
-          <button style="color:var(--blue);font-weight:700;font-size:12px" onclick="connectTv('192.168.0.101')">Connect</button>
-        </div>
-      </div>
 
-      <!-- Manual Setup Toggle -->
-      <div style="text-align:center;margin:14px 0 10px">
-        <span style="font-size:12px;color:var(--muted);cursor:pointer;font-weight:700" onclick="toggleManualSetup()">Manual setup</span>
+      <div style="text-align:center;margin:12px 0 8px">
+        <span style="font-size:12px;color:var(--muted);cursor:pointer;font-weight:700" onclick="toggleManualSetup()">Manual IP Setup</span>
       </div>
 
       <div id="manualSetupBox" style="display:none;margin-top:8px">
-        <input type="text" id="tvIpField" class="field" value="192.168.0.101" placeholder="Enter IP (e.g. 192.168.0.101)" inputmode="decimal">
-        <button class="btn" style="width:100%" onclick="submitManualIp()">Save &amp; Connect</button>
+        <input type="text" id="tvIpField" class="field" placeholder="Enter IP (e.g. 192.168.1.15)" inputmode="decimal">
+        <button class="btn" onclick="submitManualIp()">Save &amp; Connect</button>
       </div>
 
       <div style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:14px">
-        Your phone and TV need to be on the same Wi-Fi.
+        Your phone and TV need to be on the same Wi-Fi network.
       </div>
     </div>
   </div>
@@ -758,7 +798,7 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
   <div id="voiceModal" class="layer" onclick="closeModalOnBg(event)">
     <div class="sheet">
       <div class="grab"></div>
-      <h3 style="font-size:16px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px">
         <svg class="i" style="color:var(--blue)"><use href="#mic"/></svg>AI Voice &amp; Direct Typing
       </h3>
       <input type="text" id="voiceField" class="field" placeholder="Speak or enter text...">
@@ -766,7 +806,7 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
         <button class="btn" style="background:#0ea5e9" onclick="triggerVoiceInput('bn-BD')">বাংলা</button>
         <button class="btn" onclick="triggerVoiceInput('en-US')">English</button>
       </div>
-      <button class="btn" style="background:#10b981;width:100%" onclick="sendVoiceText()">Send to Screen</button>
+      <button class="btn" style="background:#10b981" onclick="sendVoiceText()">Send to Screen</button>
     </div>
   </div>
 
@@ -774,7 +814,7 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
   <div id="numpadModal" class="layer" onclick="closeModalOnBg(event)">
     <div class="sheet">
       <div class="grab"></div>
-      <h3 style="font-size:16px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px">
         <svg class="i" style="color:var(--blue)"><use href="#grid"/></svg>Number Pad
       </h3>
       <div class="numgrid">
@@ -797,52 +837,248 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 </div>
 
 <script>
-/* ---------- Helpers ---------- */
+/* ==================== 1. HELPERS & MODERN TOAST ==================== */
 const $ = id => document.getElementById(id);
 function haptic(ms = 8){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
+
 function toast(msg){
-  const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1400);
+  const t = $('toast'), m = $('toastMsg');
+  if(!t || !m) return;
+  m.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 1600);
 }
 
-/* ---------- 0. Theme & Accent Customizer ---------- */
+/* ==================== 2. DYNAMIC TV CONNECTION STATE ==================== */
+let currentTv = {
+  connected: false,
+  name: "No TV Connected",
+  ip: "",
+  model: ""
+};
+
+// Called by Android Kotlin or WebSocket when TV connects
+window.onTvConnected = function(name, ip, model){
+  currentTv.connected = true;
+  currentTv.name = name || "Samsung Smart TV";
+  currentTv.ip = ip || "";
+  currentTv.model = model || "";
+
+  $('headerTvName').textContent = currentTv.name;
+  const badge = $('headerTvBadge');
+  badge.classList.add('connected');
+  $('statusIp').textContent = currentTv.ip ? `Connected · ${currentTv.ip}` : 'Connected';
+
+  $('pairHeaderBtn').classList.add('active');
+  $('castTvName').textContent = currentTv.name;
+  $('modalTvName').textContent = currentTv.name;
+  $('modalTvSub').textContent = `${currentTv.ip} • ${currentTv.model || 'Ready'}`;
+  $('modalConnectBtn').textContent = 'Connected';
+  if ($('cfgIpField')) $('cfgIpField').value = currentTv.ip;
+
+  toast(`Connected: ${currentTv.name}`);
+};
+
+// Called by Android Kotlin or WebSocket when TV disconnects
+window.onTvDisconnected = function(){
+  currentTv.connected = false;
+  currentTv.name = "No TV Connected";
+  currentTv.ip = "";
+  currentTv.model = "";
+
+  $('headerTvName').textContent = "No TV Connected";
+  const badge = $('headerTvBadge');
+  badge.classList.remove('connected');
+  $('statusIp').textContent = "Disconnected";
+
+  $('pairHeaderBtn').classList.remove('active');
+  $('castTvName').textContent = "No TV Connected";
+  $('modalTvName').textContent = "No TV Connected";
+  $('modalTvSub').textContent = "Disconnected";
+  $('modalConnectBtn').textContent = "Connect";
+
+  toast("TV Disconnected");
+};
+
+/* ==================== 3. DYNAMIC APPS & PINNED FAVORITES ==================== */
+let installedApps = [];
+let pinnedAppIds = [];
+
+// Load pinned IDs from localStorage
+try{
+  const savedPins = localStorage.getItem('samsung_pinned_apps');
+  if (savedPins) pinnedAppIds = JSON.parse(savedPins);
+}catch(e){ pinnedAppIds = []; }
+
+function savePinnedIds(){
+  try{ localStorage.setItem('samsung_pinned_apps', JSON.stringify(pinnedAppIds)); }catch(e){}
+}
+
+// Global API called by TV bridge with installed apps array
+window.setTvApps = function(apps){
+  if (!Array.isArray(apps)) return;
+  installedApps = apps;
+  renderAppsDrawer();
+  renderPinnedFavorites();
+};
+
+function togglePinApp(appId, e){
+  if(e) e.stopPropagation();
+  const idx = pinnedAppIds.indexOf(appId);
+  if(idx > -1){
+    pinnedAppIds.splice(idx, 1);
+    toast("Removed from Pinned");
+  } else {
+    pinnedAppIds.push(appId);
+    toast("Pinned to Favorites");
+  }
+  savePinnedIds();
+  renderAppsDrawer();
+  renderPinnedFavorites();
+  haptic(12);
+}
+
+function renderPinnedFavorites(){
+  const grid = $('pinnedFavGrid');
+  if(!grid) return;
+  const pinnedList = installedApps.filter(a => pinnedAppIds.includes(a.id));
+
+  if (pinnedList.length === 0){
+    grid.innerHTML = `
+      <div class="fav-empty">
+        <span>⭐ No pinned apps yet</span>
+        <span style="font-size:9.5px;opacity:.7">Pin apps from Apps drawer</span>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = pinnedList.map(app => {
+    const iconHtml = app.iconUrl
+      ? `<img src="${app.iconUrl}" alt="${app.name}" onerror="this.src='https://placehold.co/44x44/1e293b/fff?text=${encodeURIComponent(app.name.charAt(0))}'">`
+      : `<span>${app.badgeText || app.name.slice(0, 2).toUpperCase()}</span>`;
+    const bgStyle = app.color ? `background:${app.color}` : '';
+    return `
+      <div class="fav-app glass press" onclick="launchApp('${app.id}')">
+        <div class="badge" style="${bgStyle}">${iconHtml}</div>
+        <b>${app.name}</b>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderAppsDrawer(){
+  const grid = $('allAppsGrid');
+  if(!grid) return;
+
+  if (installedApps.length === 0){
+    grid.innerHTML = `
+      <div class="apps-empty-state" style="grid-column:1/-1">
+        <svg class="i" style="font-size:32px;color:var(--muted);margin-bottom:8px"><use href="#tv"/></svg>
+        <div>No apps loaded from TV</div>
+        <div style="font-size:10px;margin-top:4px">Connect to your Samsung TV to list apps</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = installedApps.map(app => {
+    const isPinned = pinnedAppIds.includes(app.id);
+    const iconHtml = app.iconUrl
+      ? `<img src="${app.iconUrl}" alt="${app.name}" onerror="this.src='https://placehold.co/44x44/1e293b/fff?text=${encodeURIComponent(app.name.charAt(0))}'">`
+      : `<span>${app.badgeText || app.name.slice(0, 2).toUpperCase()}</span>`;
+    const bgStyle = app.color ? `background:${app.color}` : '';
+    return `
+      <div class="app-card-row glass press">
+        <div class="app-card-left" onclick="launchApp('${app.id}')">
+          <div class="badge" style="width:38px;height:38px;${bgStyle}">${iconHtml}</div>
+          <b>${app.name}</b>
+        </div>
+        <button class="star-btn ${isPinned ? 'pinned' : ''}" onclick="togglePinApp('${app.id}', event)">
+          ${isPinned ? '★' : '☆'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterApps(query){
+  const q = query.toLowerCase();
+  document.querySelectorAll('#allAppsGrid .app-card-row').forEach(row => {
+    const nameEl = row.querySelector('b');
+    if(!nameEl) return;
+    const name = nameEl.textContent.toLowerCase();
+    row.style.display = name.includes(q) ? 'flex' : 'none';
+  });
+}
+
+/* ==================== 4. 8 PREMIUM PALETTES & SINGLE THEME TOGGLE ==================== */
+const PALETTES = [
+  { name: 'Electric Blue', col1: '#4f8cff', col2: '#7c5cff' },
+  { name: 'Neon Violet',   col1: '#8b5cf6', col2: '#d946ef' },
+  { name: 'Emerald',       col1: '#10b981', col2: '#059669' },
+  { name: 'Crimson Red',   col1: '#ef4444', col2: '#991b1b' },
+  { name: 'Sunset Amber',  col1: '#f59e0b', col2: '#ea580c' },
+  { name: 'Cyber Cyan',    col1: '#06b6d4', col2: '#3b82f6' },
+  { name: 'Hot Pink',      col1: '#ec4899', col2: '#be185d' },
+  { name: 'Dark Slate',    col1: '#64748b', col2: '#334155' }
+];
+
+let activePaletteIdx = 0;
+
+function initPalettes(){
+  const grid = $('paletteGrid');
+  if(!grid) return;
+  grid.innerHTML = PALETTES.map((p, idx) => `
+    <div class="col-card ${idx === activePaletteIdx ? 'active' : ''}" onclick="selectPalette(${idx})">
+      <div class="col-dot" style="background:linear-gradient(135deg, ${p.col1}, ${p.col2})"></div>
+      <span>${p.name}</span>
+    </div>
+  `).join('');
+}
+
+function selectPalette(idx){
+  activePaletteIdx = idx;
+  const p = PALETTES[idx];
+  document.documentElement.style.setProperty('--blue', p.col1);
+  document.documentElement.style.setProperty('--violet', p.col2);
+  document.documentElement.style.setProperty('--grad', `linear-gradient(135deg, ${p.col1} 0%, ${p.col2} 100%)`);
+  initPalettes();
+  haptic(10);
+  toast(`Palette: ${p.name}`);
+}
+
 function applyTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
-  $('metaTheme').setAttribute('content', theme === 'light' ? '#eef2f9' : '#070b16');
+  $('metaTheme').setAttribute('content', theme === 'light' ? '#f1f5fb' : '#070b16');
+  const btnIcon = $('themeToggleIcon'), btnText = $('themeToggleText');
+  if(btnIcon && btnText){
+    if (theme === 'light') {
+      btnIcon.innerHTML = '<use href="#sun"/>';
+      btnText.textContent = 'Light Mode';
+    } else {
+      btnIcon.innerHTML = '<use href="#moon"/>';
+      btnText.textContent = 'Dark Mode';
+    }
+  }
 }
+
 (function initTheme(){
   let saved = null;
   try{ saved = localStorage.getItem('remoteTheme'); }catch(e){}
   const sysLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
   applyTheme(saved || (sysLight ? 'light' : 'dark'));
 })();
+
 function toggleTheme(){
-  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
   applyTheme(next);
   try{ localStorage.setItem('remoteTheme', next); }catch(e){}
-  haptic(10);
-  toast(next === 'light' ? 'Light Mode' : 'Dark Mode');
-}
-
-function setAccent(col1, col2, dotEl){
-  document.documentElement.style.setProperty('--blue', col1);
-  document.documentElement.style.setProperty('--violet', col2);
-  document.documentElement.style.setProperty('--grad', `linear-gradient(135deg, ${col1} 0%, ${col2} 100%)`);
-  document.querySelectorAll('.col-dot').forEach(d => d.classList.remove('active'));
-  if (dotEl) dotEl.classList.add('active');
   haptic(12);
-  toast('Accent Color Updated');
+  toast(next === 'light' ? 'Light Mode Activated' : 'Dark Mode Activated');
 }
 
-/* ---------- 1. Splash Screen ---------- */
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const s = $('splashScreen'); s.style.opacity = '0';
-    setTimeout(() => s.style.display = 'none', 500);
-  }, 1800);
-});
-
-/* ---------- 2. Bottom 5-Tab Navigation Router ---------- */
+/* ==================== 5. NAVIGATION ROUTER ==================== */
 const navTabs = {
   remote: { tab: 'tabRemote', nav: 'ntRemote' },
   apps: { tab: 'tabApps', nav: 'ntApps' },
@@ -858,10 +1094,9 @@ function switchNavTab(tabKey){
   });
   $(navTabs[tabKey].tab).classList.add('active');
   $(navTabs[tabKey].nav).classList.add('active');
-  haptic(10);
+  haptic(8);
 }
 
-/* ---------- 3. Modern Remote Mode Switcher ---------- */
 function switchMode(mode){
   const touch = mode !== 'buttons';
   $('tabBtn').classList.toggle('active', !touch);
@@ -872,11 +1107,15 @@ function switchMode(mode){
   haptic(10);
 }
 
-/* ---------- 4. Android Kotlin Bridge ---------- */
-function sendCmd(key){
-  if (window.Android && window.Android.sendKey) window.Android.sendKey(key);
-  else console.log("TV Key Pressed:", key);
+/* ==================== 6. ANDROID KOTLIN BRIDGE ==================== */
+function sendCmd(key, altKey){
+  if (window.Android && window.Android.sendKey) {
+    window.Android.sendKey(key);
+  } else {
+    console.log("TV Key Pressed:", key, altKey ? `(Fallback: ${altKey})` : '');
+  }
 }
+
 function launchApp(appId){
   haptic(12);
   if (window.Android && window.Android.launchApp) window.Android.launchApp(appId);
@@ -887,23 +1126,26 @@ function launchApp(appId){
 /* Tap + Hold-to-Repeat */
 document.querySelectorAll('[data-key]').forEach(el => {
   let delay, loop;
+  const key = el.dataset.key;
+  const altKey = el.dataset.altKey;
   const stop = () => { clearTimeout(delay); clearInterval(loop); el.classList.remove('down'); };
   el.addEventListener('pointerdown', e => {
     e.preventDefault();
     el.classList.add('down');
-    sendCmd(el.dataset.key); haptic();
+    sendCmd(key, altKey);
+    haptic();
     if (el.hasAttribute('data-hold')) {
-      delay = setTimeout(() => { loop = setInterval(() => { sendCmd(el.dataset.key); haptic(4); }, 110); }, 380);
+      delay = setTimeout(() => { loop = setInterval(() => { sendCmd(key, altKey); haptic(4); }, 110); }, 380);
     }
   });
   ['pointerup','pointerleave','pointercancel'].forEach(ev => el.addEventListener(ev, stop));
   el.addEventListener('contextmenu', e => e.preventDefault());
 });
 
-/* ---------- 5. Comfort Sound Shift (80 -> 50) ---------- */
+/* Comfort Sound Shift (80 -> 50) */
 function triggerComfortSoundShift(){
   haptic(20);
-  toast('Volume 80 → 50');
+  toast('Volume Jump 80 → 50');
   if (window.Android && window.Android.triggerSoundShift) {
     window.Android.triggerSoundShift();
   } else {
@@ -911,7 +1153,7 @@ function triggerComfortSoundShift(){
   }
 }
 
-/* ---------- 6. Full-Size Touchpad (Tap to Left Click) ---------- */
+/* Full-Size Touchpad (Tap to Left Click) */
 const touchMatrix = $('touchMatrix'), padDot = $('padDot');
 let pointerX = 0, pointerY = 0, pointerTime = 0, startX = 0, startY = 0, startT = 0, moved = 0;
 
@@ -943,51 +1185,40 @@ touchMatrix.addEventListener('touchmove', e => {
 
 touchMatrix.addEventListener('touchend', () => {
   padDot.style.opacity = 0;
-  if (moved < 8 && Date.now() - startT < 220) sendMouseClick();
+  if (moved < 8 && Date.now() - startT < 220) {
+    haptic(12);
+    if (window.Android && window.Android.sendMouseClick) window.Android.sendMouseClick();
+    else console.log("Mouse Click Triggered");
+  }
 }, { passive: true });
 
-function sendMouseClick(){
-  haptic(12);
-  if (window.Android && window.Android.sendMouseClick) window.Android.sendMouseClick();
-  else console.log("Mouse Click Triggered");
-}
-
-/* ---------- 7. Cast Hub Handlers ---------- */
+/* Cast Hub */
 function triggerCast(type){
   haptic(14);
-  toast('Starting ' + type + '...');
-  if (window.Android && window.Android.startCast) {
-    window.Android.startCast(type);
-  } else {
-    console.log("Cast service requested:", type);
-  }
+  toast(`Starting ${type}...`);
+  if (window.Android && window.Android.startCast) window.Android.startCast(type);
+  else console.log("Cast service requested:", type);
 }
 
-/* ---------- 8. App Drawer Search Filter ---------- */
-function filterApps(query){
-  const q = query.toLowerCase();
-  document.querySelectorAll('#allAppsGrid .full-app-card').forEach(card => {
-    const name = card.querySelector('b').textContent.toLowerCase();
-    card.style.display = name.includes(q) ? 'flex' : 'none';
-  });
-}
-
-/* ---------- 9. Pairing & Network Actions ---------- */
+/* Pairing & Modals */
 function openModal(id){ $(id).classList.add('show'); haptic(10); }
 function closeAllModals(){ document.querySelectorAll('.layer').forEach(m => m.classList.remove('show')); }
 function closeModalOnBg(e){ if (e.target.classList.contains('layer')) closeAllModals(); }
 
+function reconnectTv(){
+  if (currentTv.ip) connectTv(currentTv.ip);
+  else openModal('pairingModal');
+}
+
 function connectTv(ip){
   if (window.Android && window.Android.connectTv) window.Android.connectTv(ip);
-  $('statusIp').textContent = 'Connected · ' + ip;
-  toast('Connecting to ' + ip);
+  toast(`Connecting to ${ip}...`);
   closeAllModals();
 }
 
 function disconnectTv(){
   if (window.Android && window.Android.disconnectTv) window.Android.disconnectTv();
-  $('statusIp').textContent = 'Disconnected';
-  toast('TV Disconnected');
+  window.onTvDisconnected();
 }
 
 function scanNetwork(){
@@ -1010,13 +1241,13 @@ function saveTvConfig(){
   const ip = $('cfgIpField').value.trim();
   if (ip) {
     connectTv(ip);
-    toast('Config Saved: ' + ip);
+    toast(`Config Saved: ${ip}`);
   }
 }
 
 function triggerVoiceInput(lang){
   if (window.Android && window.Android.startVoice) window.Android.startVoice(lang);
-  else alert("SpeechRecognizer will start for " + lang);
+  else toast(`Voice recognition (${lang})`);
 }
 
 function sendVoiceText(){
@@ -1027,6 +1258,21 @@ function sendVoiceText(){
     closeAllModals();
   }
 }
+
+/* ==================== INITIALIZATION ==================== */
+window.addEventListener('load', () => {
+  initPalettes();
+  renderPinnedFavorites();
+  renderAppsDrawer();
+
+  setTimeout(() => {
+    const s = $('splashScreen');
+    if (s) {
+      s.style.opacity = '0';
+      setTimeout(() => s.style.display = 'none', 400);
+    }
+  }, 1200);
+});
 </script>
 </body>
 </html>
