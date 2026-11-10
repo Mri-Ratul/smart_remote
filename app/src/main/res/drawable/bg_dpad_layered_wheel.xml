@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Bottom Shadow Layer -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#CBD5E1" />
+        </shape>
+    </item>
+    <!-- Main Outer Rim -->
+    <item
+        android:bottom="3dp"
+        android:left="1dp"
+        android:right="1dp"
+        android:top="1dp">
+        <shape android:shape="oval">
+            <solid android:color="#F8FAFC" />
+            <stroke android:width="2dp" android:color="#E2E8F0" />
+        </shape>
+    </item>
+</layer-list>
