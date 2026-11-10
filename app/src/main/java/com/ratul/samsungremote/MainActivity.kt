@@ -18,7 +18,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.appdistribution.FirebaseAppDistribution
 import kotlinx.coroutines.*
-import mri.ratul.R
 
 class MainActivity : AppCompatActivity() {
 
