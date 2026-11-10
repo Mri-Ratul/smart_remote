@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build APK
+  build_and_distribute:
+    name: Build & Upload to Firebase
     runs-on: ubuntu-latest
 
     steps:
@@ -26,39 +26,29 @@ jobs:
           if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
             ./gradlew assembleDebug --no-daemon
-            echo "apk_dir=app/build/outputs/apk/debug" >> $GITHUB_ENV
           elif [ -f "./android/gradlew" ]; then
             chmod +x ./android/gradlew
             cd android && ./gradlew assembleDebug --no-daemon && cd ..
-            echo "apk_dir=android/app/build/outputs/apk/debug" >> $GITHUB_ENV
+          else
+            gradle wrapper --gradle-version 8.7
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --no-daemon
           fi
 
-      - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: ${{ env.apk_dir }}/app-debug.apk
+      # বিল্ড হওয়া APK-এর সঠিক লোকেশন খুঁজে বের করা
+      - name: Locate Built APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find . -name "app-debug.apk" | head -n 1)
+          echo "Found APK at: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> $GITHUB_ENV
 
-  distribute:
-    name: Firebase App Distribution
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Download Built APK
-        uses: actions/download-artifact@v4
-        with:
-          name: app-debug
-          path: apk-output
-
+      # সরাসরি ফায়ারবেসে আপলোড
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
           groups: internal-testers
-          file: apk-output/app-debug.apk
+          file: ${{ env.apk_path }}
           releaseNotes: "Build commit: ${{ github.sha }}"
