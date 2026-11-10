@@ -21,17 +21,36 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Grant Execute Permission to Gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
+      # gradlew ফাইল রুটে থাকলে এক্সিকিউট পারমিশন সেট করবে
+      - name: Grant Execute Permission to Gradlew
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+          elif [ -f "./android/gradlew" ]; then
+            chmod +x ./android/gradlew
+          fi
+
+      # রুটে অথবা android ফোল্ডারে থাকলে অটো বিল্ড রান করবে
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        run: |
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug
+          elif [ -f "./android/gradlew" ]; then
+            cd android && ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
 
   distribute:
     name: Firebase App Distribution (Real TV Test)
@@ -46,15 +65,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/debug
+          path: apk-output
 
-      - name: Upload to Firebase App Distribution
+      - name: Locate and Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
           groups: internal-testers
-          file: app/build/outputs/apk/debug/app-debug.apk
+          file: apk-output/app-debug.apk
           releaseNotes: "Build: ${{ github.sha }}"
 
   test-lab:
@@ -70,7 +89,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/debug
+          path: apk-output
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -84,6 +103,6 @@ jobs:
         run: |
           gcloud firebase test android run \
             --type robo \
-            --app app/build/outputs/apk/debug/app-debug.apk \
+            --app apk-output/app-debug.apk \
             --device model=oriole,version=33,locale=en,orientation=portrait \
             --timeout 2m
