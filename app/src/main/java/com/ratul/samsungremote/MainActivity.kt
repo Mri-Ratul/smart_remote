@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -15,7 +16,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.appdistribution.FirebaseAppDistribution
 import kotlinx.coroutines.*
+import mri.ratul.R
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,6 +30,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // ইন-অ্যাপ নতুন রিলিজ আপডেট চেক
+        checkForAppUpdates()
 
         tvManager = SamsungTvManager(this)
         webView = findViewById(R.id.webViewRemote)
@@ -63,6 +69,27 @@ class MainActivity : AppCompatActivity() {
             tvManager.connect(savedIp)
         } else {
             tvManager.autoDiscoverTv()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // অ্যাপ ব্যাকগ্রাউন্ড থেকে আবার চালু করলেও আপডেট চেক করবে
+        checkForAppUpdates()
+    }
+
+    // Firebase App Distribution In-App Update চেকার
+    private fun checkForAppUpdates() {
+        try {
+            FirebaseAppDistribution.getInstance().updateIfNewReleaseAvailable()
+                .addOnSuccessListener {
+                    Log.d("AppDistribution", "Update check triggered successfully.")
+                }
+                .addOnFailureListener { e ->
+                    Log.e("AppDistribution", "Update check failed: ${e.message}")
+                }
+        } catch (e: Exception) {
+            Log.e("AppDistribution", "Error initializing App Distribution: ${e.message}")
         }
     }
 
@@ -136,7 +163,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ভয়েস ইনপুট প্রসেসিং
+    // ভয়েস ইনপুট প্রসেসিং
     private fun startSpeechListening(lang: String) {
         speechRecognizer?.destroy()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
@@ -151,7 +178,7 @@ class MainActivity : AppCompatActivity() {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
                     val transcribedText = matches[0]
-                    // সরাসরি HTML-এর ইনপুট বক্সে ভয়েস টেক্সট পাঠিয়ে দেওয়া
+                    // সরাসরি HTML-এর ইনপুট বক্সে ভয়েস টেক্সট পাঠিয়ে দেওয়া
                     webView.evaluateJavascript("document.getElementById('voiceField').value = '$transcribedText';", null)
                 }
             }
